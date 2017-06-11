@@ -1,0 +1,66 @@
+{
+    "//": "general settings",
+    "general": {
+        "//": "how long to wait after startup for the network & API to become accessible",
+	"//": "useful if started after boot while the network is still being set up",
+	"//": "value is in seconds, specify 0 to wait forever until access succeeds",
+        "startup_timeout": 0,
+
+	"//": "directory where capture images will appear",
+	"//": "note: make sure that both the PIR capture command and the motion software",
+        "//": "      write their images into exactly this directory!",
+	"image_dir": "/tmp/piCamBot",
+
+	"//": "delete captured image after sending them? recommended, otherwise your disk runs full",
+	"//": "note: this also purges (removes and re-creates) the image directory on startup",
+	"delete_images": true
+    },
+
+    "//": "telegram-related settings",
+    "telegram": {
+        "//": "telegram bot authorization token",
+        "token": "YOUR_TELEGRAM_API_TOKEN",
+
+        "//": "telegram IDs of the bot owner(s). only owners can interact with the bot",
+        "owner_ids": [ YOUR_TELEGRAM_USER_ID ]
+    },
+
+    "//": "PIR (passive infrared) sensor related settings (for motion detection via PIR sensor)",
+    "pir": {
+        "//": "enable motion detection via PIR sensor?",
+	"enable": true,
+
+	"//": "GPIO pin for reading from sensor",
+	"gpio": 8,
+
+	"//": "command for creating snapshots if motion is detected",
+	"capture_cmd": "raspistill -a 12 -dt -vf -hf -n -t 1500 -o /tmp/piCamBot/piCamBot_%d.jpg",
+	"__capture_cmd": "raspistill -a 12 -dt -vf -hf -n -t 5000 -tl 1000 -o /tmp/piCamBot/piCamBot_%d.jpg"
+    },
+
+    "//": "motion-related settings (for motion detection via camera)",
+    "motion": {
+	"//": "enable motion detection via camera?",
+	"enable": false,
+
+        "//": "pid file for stopping the motion daemon (process_id_file setting)",
+        "pid_file": "/tmp/motion/motion.pid",
+
+        "//": "command for starting motion (always use option -b for daemon mode!)",
+        "cmd": "motion -b -c /home/pi/picambot/motion.conf",
+
+        "//": "process name to send SIGKILL to in case stopping by PID is not possible",
+        "kill_name": "motion"
+    },
+
+    "//": "settings for capturing single shots",
+    "capture": {
+        "//": "command for creating a snapshot",
+	"//": "note: the resulting image should be located outside the usual image_dir,",
+	"//": "      otherwise it gets ignored while motion tracking is disabled",
+        "cmd": "raspistill -t 2000 -a 12 -vf -hf -n -o /tmp/piCamBot.jpg",
+
+        "//": "where to find the image after capturing",
+        "file": "/tmp/piCamBot.jpg"
+    }
+} 
