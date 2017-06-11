@@ -1,8 +1,8 @@
 # piCamBot
-Security camera based on a Raspberry Pi and Telegram, controllable by smartphone.
+Security camera based on a Raspberry Pi and Telegram, controllable via smartphone and desktop computer.
 
 ## Description
-This is a simple Telegram bot that acts as a security camera. It is intented to run on a Raspberry Pi but may be used on any other Linux system, too. It requires a camera (for example a Raspberry Pi Camera Module v2) and either a PIR sensor or the software *motion*.
+This is a simple Telegram bot that acts as a security camera. It is intented to run on a Raspberry Pi but may be used on any other Linux system, too. It requires a camera (for example a Raspberry Pi Camera Module v2) and either a PIR sensor or the software *motion*. It can be controlled by any Telegram client, thus supporting many different platforms such as smartphones (Android, iOS and Windows Phone) and desktop computers (Linux, macOS and Windows).
 
 ## Requirements
 - Raspberry PI (or any other Linux system)
