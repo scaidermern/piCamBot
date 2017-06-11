@@ -12,10 +12,15 @@ This is a simple Telegram bot that acts as a security camera. It is intented to 
 - python:
   - [python-telegram-bot](https://github.com/python-telegram-bot/python-telegram-bot)
   - [PyInotify](https://github.com/dsoprea/PyInotify)
-  
-## Setup
 
-### 1) Configuration
+To install the necessary software on Debian or a similar distribution use the following commands:
+- as root:
+  - `apt-get install python-pip`
+- as regular user:
+  - `pip install python-telegram-bot`
+  - `pip install inotify`
+  
+## Configuration
 Edit `config.json`. Enter your Telegram `token` and `owner_ids`. See these [instructions for obtaining your Telegram user ID](https://stackoverflow.com/questions/31078710/how-to-obtain-telegram-chat-id-for-a-specific-user). Alternatively just run piCamBot and send a message to your bot. piCamBot will log messages from unknown users and write out their user IDs.
 
 If you aren't using a Raspberry Pi then you need to change `pir`:`capture_cmd` and `capture`:`cmd` to use a different command than `raspistill`.
@@ -24,21 +29,28 @@ Either enable `pir` (when using a PIR sensor) or `motion` (when no PIR sensor is
 
 Note: you can't enable `pir` and `motion` at the same time. However you can disable both and still use piCamBot to perform manual camera captures.
 
-#### 1a) Using a PIR sensor
+### a) Configuration using a PIR sensor
 Set a correct `pir`:`gpio` port. You can use `python pir_test.py` to check if the PIR is working and a correct gpio port has been configured.
 
-#### 1b) Using motion
+### 1) Configuration using motion software
 Check that the `pid_file` path is correct. It must match the `process_id_file` setting in your `motion.conf`. Also check that `general`:`image_dir` matches your `motion.conf`'s `target_dir`. Edit `motion.conf` and adjust `rotate`, `width`, `height` to your camera. Also adjust `threshold` and `noise_level` to your environment (good luck with that...). `daemon` mode must be enabled for piCamBot!
 
 Ideally run motion separately to adjust all these settings until it matches your expected results. Afterwards try to use it with piCamBot.
 
-### 2) Starting the bot
-Execute `python bot.py`. The bot will automatically send a greeting message to all owners if Telegram access is working.
+### Optional: Use a tmpfs for captured images
+Especially when using a Raspberry Pi it is a good idea to write captured images to a tmpfs. This increases the lifespan if your sdcard. Using the standard configuration piCamBot writes its captures to `/tmp/piCamBot/`. To mount `/tmp/` as tmpfs add the following line to your `/etc/fstab`:
+```
+tmpfs           /tmp            tmpfs   nosuid,size=25%   0       0
+```
+After a reboot `/tmp/` should be mounted as tmpfs.
 
-### 3) Controlling the bot
+## Starting the bot
+Execute `python bot.py`. The bot will automatically send a greeting message to all owners if Telegram access is working. For troubleshooting take a look at its log files inside the piCamBot directory.
+
+## Controlling the bot
 The bot will start with motion-based capturing being disabled.
 
-After enabing motion-based capturing it will either react on the PIR sensor and performs captures whenever a motion is reported. Or it reacts on captures performed by the motion software. In either case, captured images are sent via Telegram to all owners.
+After enabing motion-based capturing it will either react on the PIR sensor and performs captures whenever a motion is reported. Or it reacts on captures performed by the motion software. In either case, captured images are sent via Telegram to all owners. Afterwards these images are deleted from the disk. You can control this behavior via config option `general`:`delete_images`.
 
 It supports the following commands:
 - `/arm`: Starts motion-based capturing. If `motion` software is enabled it will be started as well.
