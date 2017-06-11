@@ -59,6 +59,14 @@ It supports the following commands:
 - `/capture`: Takes a manual capture with the camera. If motion-based capturing and `motion` software is enabled it will be temporarily stopped and started again after the capture. This is needed since access to the camera is exclusive.
 - `/kill`: Only to be used if motion` software is enabled. This kills the software (using SIGKILL) in case it is running and `/disarm` fails to stop it.
 
+# Examples
+
+## Example conversation with the Telegram bot
+<img src="images/conversation.png" width="200">
+
+## Example Raspberry Pi based security cam with PIR sensor
+<img src="images/cam.jpg" width="200">
+
 # License
 [GPL v3](http://www.gnu.org/licenses/gpl.html)
 (c) [Alexander Heinlein](http://choerbaert.org)
