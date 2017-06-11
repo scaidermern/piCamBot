@@ -32,7 +32,7 @@ Note: you can't enable `pir` and `motion` at the same time. However you can disa
 ### a) Configuration using a PIR sensor
 Set a correct `pir`:`gpio` port. You can use `python pir_test.py` to check if the PIR is working and a correct gpio port has been configured.
 
-### 1) Configuration using motion software
+### b) Configuration using motion software
 Check that the `pid_file` path is correct. It must match the `process_id_file` setting in your `motion.conf`. Also check that `general`:`image_dir` matches your `motion.conf`'s `target_dir`. Edit `motion.conf` and adjust `rotate`, `width`, `height` to your camera. Also adjust `threshold` and `noise_level` to your environment (good luck with that...). `daemon` mode must be enabled for piCamBot!
 
 Ideally run motion separately to adjust all these settings until it matches your expected results. Afterwards try to use it with piCamBot.
