@@ -62,7 +62,7 @@ It supports the following commands:
 # Examples
 
 ## Example conversation with the Telegram bot
-<img src="images/conversation.png" width="200">
+<img src="images/conversation.jpg" width="200">
 
 ## Example Raspberry Pi based security cam with PIR sensor
 <img src="images/cam.jpg" width="200">
