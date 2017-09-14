@@ -156,6 +156,7 @@ def fetchTelegramUpdates(bot):
         except Exception as e:
             logger.warn(e.message)
             logger.warn(traceback.format_exc())
+            time.sleep(1)
 
 def performCommand(message):
     cmd = message.text.lower().rstrip()
