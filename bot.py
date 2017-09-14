@@ -12,7 +12,6 @@
 #   - configurable log file path
 #   - introduce class, get rid of global variables
 #   - check return code of raspistill
-#   - support multiple owners
 #
 
 import RPi.GPIO as GPIO
@@ -40,11 +39,14 @@ config = None
 logger = None
 # send capture images?
 reportMotion = False
+# telegram bot
+bot = None
 
 def main():
     global config
     global logger
     global update_id
+    global bot
 
     # setup logging, we want to log both to stdout and a file
     logFormat = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -58,6 +60,8 @@ def main():
     logger.setLevel(logging.INFO)
 
     logger.info('Starting')
+
+    signal.signal(signal.SIGINT, signalHandler)
 
     config = json.load(open('config.json', 'r'))
     # check for conflicting config options
@@ -89,7 +93,7 @@ def main():
     # pretend to be nice to our owners
     for owner_id in config['telegram']['owner_ids']:
         try:
-            bot.sendMessage(chat_id=owner_id, text="Hello there, I'm back!")
+            bot.sendMessage(chat_id=owner_id, text='Hello there, I\'m back!')
         except Exception as e:
             # most likely network problem or user has blocked the bot
             logger.warn('Could not send hello to user %s: %s' % (owner_id, e.message))
@@ -382,6 +386,18 @@ def watchPIR():
         logger.info('PIR: motion detected')
         args = shlex.split(config['pir']['capture_cmd'])
         subprocess.call(args)
+
+def signalHandler(signal, frame):
+    global bot
+
+    logger.error('Caught signal %d, terminating now.', signal)
+    for owner_id in config['telegram']['owner_ids']:
+        try:
+            bot.sendMessage(chat_id=owner_id, text='Caught signal %d, terminating now.' % signal)
+        except Exception as e:
+            # most likely network problem or user has blocked the bot
+            logger.warn('Could not send hello to user %s: %s' % (owner_id, e.message))
+    sys.exit(1)
 
 if __name__ == '__main__':
     main()
