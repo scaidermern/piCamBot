@@ -50,7 +50,7 @@ tmpfs           /tmp            tmpfs   nosuid,size=25%   0       0
 After a reboot `/tmp/` should be mounted as tmpfs.
 
 ## Starting the bot
-Execute `python bot.py`. The bot will automatically send a greeting message to all owners if Telegram access is working. For troubleshooting take a look at its log files inside the piCamBot directory.
+Execute `python piCamBot.py`. The bot will automatically send a greeting message to all owners if Telegram access is working. For troubleshooting take a look at its log files inside the piCamBot directory. It is recommended to start the bot automatically after boot, e.g. via a crontab entry or init script.
 
 ## Controlling the bot
 The bot will start with motion-based capturing being disabled.
