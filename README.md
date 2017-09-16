@@ -8,6 +8,7 @@ This is a simple Telegram bot that acts as a security camera. It is intented to 
 - Raspberry PI (or any other Linux system)
 - Camera (e.g. Raspberry Pi Camera Module v2)
 - PIR sensor (e.g. HC-SR501) or [motion](http://lavrsen.dk/foswiki/bin/view/Motion/WebHome) software (using the PIR sensor is recommended, it works way better than using motion software)
+- Piezo buzzer (optional)
 - [Telegram](https://telegram.org/) account and a [Telegram bot](https://core.telegram.org/bots)
 - python:
   - [python-telegram-bot](https://github.com/python-telegram-bot/python-telegram-bot)
@@ -29,13 +30,17 @@ Either enable `pir` (when using a PIR sensor) or `motion` (when no PIR sensor is
 
 Note: you can't enable `pir` and `motion` at the same time. However you can disable both and still use piCamBot to perform manual camera captures.
 
-### a) Configuration using a PIR sensor
-Set a correct `pir`:`gpio` port. You can use `python pir_test.py` to check if the PIR is working and a correct gpio port has been configured.
+### 1a) Configuration using a PIR sensor
+Set a correct `pir`:`gpio` port. You can use `python test_pir.py` to check if the PIR is working and a correct gpio port has been configured.
 
-### b) Configuration using motion software
+### 1b) Configuration using motion software
 Check that the `pid_file` path is correct. It must match the `process_id_file` setting in your `motion.conf`. Also check that `general`:`image_dir` matches your `motion.conf`'s `target_dir`. Edit `motion.conf` and adjust `rotate`, `width`, `height` to your camera. Also adjust `threshold` and `noise_level` to your environment (good luck with that...). `daemon` mode must be enabled for piCamBot!
 
 Ideally run motion separately to adjust all these settings until it matches your expected results. Afterwards try to use it with piCamBot.
+
+### 2) Configuring a buzzer
+
+You can enable acoustic alarms, e.g. with a piezo buzzer. Enable the buzzer via `buzzer`:`enable` and set `buzzer`:`gpio` accordingly. You can also define custom buzzer sequences for various actions. To see if the buzzer is working and the correct gpio port has been set you can run `python test_buzzer.py`.
 
 ### Optional: Use a tmpfs for captured images
 Especially when using a Raspberry Pi it is a good idea to write captured images to a tmpfs. This increases the lifespan if your sdcard. Using the standard configuration piCamBot writes its captures to `/tmp/piCamBot/`. To mount `/tmp/` as tmpfs add the following line to your `/etc/fstab`:

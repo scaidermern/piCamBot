@@ -30,7 +30,7 @@
         "//": "enable motion detection via PIR sensor?",
 	"enable": true,
 
-	"//": "GPIO pin for reading from sensor",
+	"//": "GPIO input pin for reading from sensor",
 	"gpio": 8,
 
 	"//": "command for creating snapshots if motion is detected",
@@ -62,5 +62,40 @@
 
         "//": "where to find the image after capturing",
         "file": "/tmp/piCamBot.jpg"
+    },
+
+    "//": "buzzer settings for acoustic alarms, e.g. for piezo buzzers",
+    "//": "note: each buzzer sequence is defined by 1's (buzzer on) and 0's (buzzer off)",
+    "//": "      and a configurable duration before 'playing' the next character",
+    "//": "note: buzzer gets automatically turned off after each onetime sequence",
+    "//": "      (so you don't need to terminate a onetime sequence with a 0",
+    "//": "note: if you want to disable the buzzer for specific sequences then just",
+    "//": "      leave the corresponding sequences empty",
+    "//": "note: currently playing the sequence will block the corresponding thread, so",
+    "//": "      choose short sequences instead of your favorite melody",
+    "buzzer": {
+	"//": "enable buzzer",
+	"enable": false,
+
+	"//": "GPIO output pin for enabling/disabling buzzer",
+	"gpio": 26,
+
+	"//": "duration of on and off periods for sequences, in seconds",
+	"duration": 0.2,
+
+        "//": "on/off sequence (continuous) during motion detection",
+	"seq_motion": "1110",
+
+	"//": "on/off sequence (onetime) when arming camera",
+	"//": "note: buzzer gets automatically turned off after this sequence",
+	"seq_arm": "1",
+
+	"//": "on/off sequence (onetime) when disarming camera",
+	"//": "note: buzzer gets automatically turned off after this sequence",
+	"seq_disarm": "101",
+
+	"//": "on/off sequence (onetime) when capturing single shots",
+	"//": "note: buzzer gets automatically turned off after this sequence",
+	"seq_capture": "10101"
     }
-} 
+}

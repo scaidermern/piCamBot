@@ -69,6 +69,9 @@ def main():
         logger.error('Enabling both PIR and motion based capturing is not supported')
         return
 
+    # register signal handler, needs config
+    signal.signal(signal.SIGINT, signalHandler)
+
     bot = telegram.Bot(config['telegram']['token'])
 
     # check if API access works. try again on network errors,
@@ -104,6 +107,12 @@ def main():
         update_id = bot.getUpdates()[0].update_id
     except IndexError:
         update_id = None
+
+    # set up buzzer if configured
+    if config['buzzer']['enable']:
+        gpio = config['buzzer']['gpio']
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setup(gpio, GPIO.OUT)
 
     # set up telegram thread
     telegram_thread = threading.Thread(target=fetchTelegramUpdates, args=[bot])
@@ -192,10 +201,16 @@ def commandArm(message):
         return
 
     message.reply_text('Enabling motion-based capturing...')
+
+    if config['buzzer']['enable']:
+        buzzer_sequence = config['buzzer']['seq_arm']
+        if len(buzzer_sequence) > 0:
+            playSequence(buzzer_sequence)
+
     reportMotion = True
 
     if not config['motion']['enable']:
-        # we are done, PIR needs no further steps
+        # we are done, PIR-mode needs no further steps
         return
 
     # start motion software if not already running
@@ -222,9 +237,16 @@ def commandDisarm(message):
         return
 
     message.reply_text('Disabling motion-based capturing...')
+
+    if config['buzzer']['enable']:
+        buzzer_sequence = config['buzzer']['seq_disarm']
+        if len(buzzer_sequence) > 0:
+            playSequence(buzzer_sequence)
+
     reportMotion = False 
 
     if not config['motion']['enable']:
+        # we are done, PIR-mode needs no further steps
         return
 
     pid = getMotionPID()
@@ -293,6 +315,11 @@ def commandStatus(message):
 
 def commandCapture(message):
     message.reply_text('Capture in progress, please wait...')
+
+    if config['buzzer']['enable']:
+        buzzer_sequence = config['buzzer']['seq_capture']
+        if len(buzzer_sequence) > 0:
+            playSequence(buzzer_sequence)
 
     capture_file = config['capture']['file'].encode('utf-8')
     if os.path.exists(capture_file):
@@ -370,26 +397,50 @@ def isMotionRunning():
 def watchPIR():
     logger.info('Setting up PIR watch thread')
 
+    if config['buzzer']['enable']:
+        buzzer_sequence = config['buzzer']['seq_motion']
+
     gpio = config['pir']['gpio']
     GPIO.setmode(GPIO.BOARD)
     GPIO.setup(gpio, GPIO.IN)
     while True:
+        if not reportMotion:
+            time.sleep(1)
+            continue
+
         pir = GPIO.input(gpio)
         if pir == 0:
             # no motion detected
             time.sleep(1)
             continue
 
-        if not reportMotion:
-            time.sleep(1)
-            continue
-
         logger.info('PIR: motion detected')
+        if len(buzzer_sequence) > 0:
+            playSequence(buzzer_sequence)
         args = shlex.split(config['pir']['capture_cmd'])
         subprocess.call(args)
 
+def playSequence(sequence):
+    gpio = config['buzzer']['gpio']
+    duration = config['buzzer']['duration']
+    for i in sequence:
+        if i == '1':
+            GPIO.output(gpio, 1)
+        elif i == '0':
+            GPIO.output(gpio, 0)
+        else:
+            logger.warnprint('unknown pattern in sequence: %s', i)
+        time.sleep(duration)
+    GPIO.output(gpio, 0)
+
 def signalHandler(signal, frame):
     global bot
+
+    # always disable buzzer
+    if config['buzzer']['enable']:
+        gpio = config['buzzer']['gpio']
+        GPIO.output(gpio, 0)
+        GPIO.cleanup()
 
     logger.error('Caught signal %d, terminating now.', signal)
     for owner_id in config['telegram']['owner_ids']:
