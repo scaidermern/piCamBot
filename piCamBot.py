@@ -410,7 +410,7 @@ class piCamBot:
                 continue
 
             self.logger.info('PIR: motion detected')
-            if len(buzzer_sequence) > 0:
+            if self.config['buzzer']['enable'] and len(buzzer_sequence) > 0:
                 self.playSequence(buzzer_sequence)
             args = shlex.split(self.config['pir']['capture_cmd'])
             subprocess.call(args)
