@@ -10,16 +10,18 @@ This is a simple Telegram bot that acts as a security camera. It is intented to 
 - PIR sensor (e.g. HC-SR501) or [motion](http://lavrsen.dk/foswiki/bin/view/Motion/WebHome) software (using the PIR sensor is recommended, it works way better than using motion software)
 - Piezo buzzer (optional)
 - [Telegram](https://telegram.org/) account and a [Telegram bot](https://core.telegram.org/bots)
-- python:
+- python (version 2 or 3):
+  - [RPi.GPIO](https://sourceforge.net/projects/raspberry-gpio-python/) (optional, for controlling a PIR sensor or buzzer)
   - [python-telegram-bot](https://github.com/python-telegram-bot/python-telegram-bot)
   - [PyInotify](https://github.com/dsoprea/PyInotify)
 
-To install the necessary software on Debian or a similar distribution use the following commands:
+To install the necessary software on Raspbian, Debian or a similar distribution use the following commands:
 - as root:
-  - `apt-get install python-pip`
+  - `apt-get install python-rpi.gpio` or for python3 `apt-get install python3-rpi.gpio` (optional, probably already pre-installed on your Pi)
+  - `apt-get install python-pip` or for python3 `apt-get install python3-pip`
 - as regular user:
-  - `pip install python-telegram-bot`
-  - `pip install inotify`
+  - `pip install python-telegram-bot` or for python3 `pip3 install python-telegram-bot`
+  - `pip install inotify` or for python3 `pip3 install inotify`
   
 ## Configuration
 Edit `config.json`. Enter your Telegram `token` and `owner_ids`. See these [instructions for obtaining your Telegram user ID](https://stackoverflow.com/questions/31078710/how-to-obtain-telegram-chat-id-for-a-specific-user). Alternatively just run piCamBot and send a message to your bot. piCamBot will log messages from unknown users and write out their user IDs.

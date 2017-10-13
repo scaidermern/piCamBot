@@ -28,6 +28,7 @@ import telegram
 import threading
 import time
 import traceback
+from six.moves import range
 from telegram.error import NetworkError, Unauthorized
 
 class piCamBot:
@@ -75,8 +76,8 @@ class piCamBot:
         # might happen after boot while the network is still being set up
         self.logger.info('Waiting for network and API to become accessible...')
         timeout = self.config['general']['startup_timeout']
-        timeout = timeout if timeout > 0 else sys.maxint
-        for i in xrange(timeout):
+        timeout = timeout if timeout > 0 else sys.maxsize
+        for i in range(timeout):
             try:
                 self.logger.info(self.bot.getMe())
                 self.logger.info('API access working!')
@@ -85,7 +86,7 @@ class piCamBot:
                 pass # don't log, just ignore
             except Exception as e:
                 # log other exceptions, then break
-                self.logger.error(e.message)
+                self.logger.error(str(e))
                 self.logger.error(traceback.format_exc())
                 raise
             time.sleep(1)
@@ -96,12 +97,12 @@ class piCamBot:
                 self.bot.sendMessage(chat_id=owner_id, text='Hello there, I\'m back!')
             except Exception as e:
                 # most likely network problem or user has blocked the bot
-                self.logger.warn('Could not send hello to user %s: %s' % (owner_id, e.message))
+                self.logger.warn('Could not send hello to user %s: %s' % (owner_id, str(e)))
 
         # get the first pending update_id, this is so we can skip over it in case
         # we get an "Unauthorized" exception
         try:
-            self.update_id = self.bot.getUpdates()[0].self.update_id
+            self.update_id = self.bot.getUpdates()[0].update_id
         except IndexError:
             self.update_id = None
 
@@ -159,7 +160,7 @@ class piCamBot:
             except NetworkError as e:
                 time.sleep(1)
             except Exception as e:
-                self.logger.warn(e.message)
+                self.logger.warn(str(e))
                 self.logger.warn(traceback.format_exc())
                 time.sleep(1)
 
@@ -316,7 +317,9 @@ class piCamBot:
             if len(buzzer_sequence) > 0:
                 self.playSequence(buzzer_sequence)
 
-        capture_file = self.config['capture']['file'].encode('utf-8')
+        capture_file = self.config['capture']['file']
+        if sys.version_info[0] == 2: # yay! python 2 vs 3 unicode fuckup
+            capture_file = capture_file.encode('utf-8')
         if os.path.exists(capture_file):
             os.remove(capture_file)
 
@@ -342,7 +345,7 @@ class piCamBot:
         if not os.path.exists(watch_dir):
             os.makedirs(watch_dir) # racy but we don't care
         notify = inotify.adapters.Inotify()
-        notify.add_watch(watch_dir)
+        notify.add_watch(watch_dir.encode('utf-8'))
 
         # check for new events
         # (runs forever but we could bail out: check for event being None
@@ -359,7 +362,11 @@ class piCamBot:
                 continue
 
             # check for image
-            filepath = ('%s/%s' % (watch_path, filename)).encode('utf-8')
+            if sys.version_info[0] == 3: # yay! python 2 vs 3 unicode fuckup
+                watch_path = watch_path.decode()
+                filename = filename.decode()
+            filepath = ('%s/%s' % (watch_path, filename))
+
             if not filename.endswith('.jpg'):
                 self.logger.info('New non-image file: "%s" - ignored' % filepath)
                 continue
@@ -371,7 +378,7 @@ class piCamBot:
                         self.bot.sendPhoto(chat_id=owner_id, caption=filepath, photo=open(filepath, 'rb'))
                     except Exception as e:
                         # most likely network problem or user has blocked the bot
-                        self.logger.warn('Could not send image to user %s: %s' % (owner_id, e.message))
+                        self.logger.warn('Could not send image to user %s: %s' % (owner_id, str(e)))
 
             # always delete image, even if reporting is disabled
             if self.config['general']['delete_images']:
@@ -441,7 +448,7 @@ class piCamBot:
                 self.bot.sendMessage(chat_id=owner_id, text='Caught signal %d, terminating now.' % signal)
             except Exception as e:
                 # most likely network problem or user has blocked the bot
-                self.logger.warn('Could not send hello to user %s: %s' % (owner_id, e.message))
+                self.logger.warn('Could not send hello to user %s: %s' % (owner_id, str(e)))
         sys.exit(1)
 
 if __name__ == '__main__':
