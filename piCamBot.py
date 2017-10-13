@@ -64,7 +64,10 @@ class piCamBot:
             return
 
         # register signal handler, needs config to be initialized
+        signal.signal(signal.SIGHUP, self.signalHandler)
         signal.signal(signal.SIGINT, self.signalHandler)
+        signal.signal(signal.SIGQUIT, self.signalHandler)
+        signal.signal(signal.SIGTERM, self.signalHandler)
 
         self.bot = telegram.Bot(self.config['telegram']['token'])
 
