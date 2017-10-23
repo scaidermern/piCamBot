@@ -216,7 +216,13 @@ class piCamBot:
             return
 
         args = shlex.split(self.config['motion']['cmd'])
-        subprocess.call(args)
+        try:
+            subprocess.call(args)
+        except Exception as e:
+            self.logger.warn(str(e))
+            self.logger.warn(traceback.format_exc())
+            message.reply_text('Error: Failed to start motion software: %s' % str(e))
+            return
 
         # wait until motion is running to prevent
         # multiple start and wrong status reports
@@ -287,7 +293,13 @@ class piCamBot:
             message.reply_text('Error: kill command only supported when motion is enabled')
             return
         args = shlex.split('killall -9 %s' % self.config['motion']['kill_name'])
-        subprocess.call(args)
+        try:
+            subprocess.call(args)
+        except Exception as e:
+            self.logger.warn(str(e))
+            self.logger.warn(traceback.format_exc())
+            message.reply_text('Error: Failed to send kill signal: %s' % str(e))
+            return
         message.reply_text('Kill signal has been sent.')
 
     def commandStatus(self, message):
@@ -324,7 +336,13 @@ class piCamBot:
             os.remove(capture_file)
 
         args = shlex.split(self.config['capture']['cmd'])
-        subprocess.call(args)
+        try:
+            subprocess.call(args)
+        except Exception as e:
+            self.logger.warn(str(e))
+            self.logger.warn(traceback.format_exc())
+            message.reply_text('Error: Capture failed: %s' % str(e))
+            return
 
         if not os.path.exists(capture_file):
             message.reply_text('Error: Capture file not found: "%s"' % capture_file)
@@ -420,7 +438,13 @@ class piCamBot:
             if self.config['buzzer']['enable'] and len(buzzer_sequence) > 0:
                 self.playSequence(buzzer_sequence)
             args = shlex.split(self.config['pir']['capture_cmd'])
-            subprocess.call(args)
+
+            try:
+                subprocess.call(args)
+            except Exception as e:
+                self.logger.warn(str(e))
+                self.logger.warn(traceback.format_exc())
+                message.reply_text('Error: Capture failed: %s' % str(e))
 
     def playSequence(self, sequence):
         gpio = self.config['buzzer']['gpio']
