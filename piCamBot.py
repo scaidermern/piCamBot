@@ -58,7 +58,13 @@ class piCamBot:
 
         self.logger.info('Starting')
 
-        self.config = json.load(open('config.json', 'r'))
+        try:
+            self.config = json.load(open('config.json', 'r'))
+        except Exception as e:
+            self.logger.error(str(e))
+            self.logger.error(traceback.format_exc())
+            self.logger.error("Could not parse config file")
+            return
         # check for conflicting config options
         if self.config['pir']['enable'] and self.config['motion']['enable']:
             self.logger.error('Enabling both PIR and motion based capturing is not supported')
