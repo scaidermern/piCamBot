@@ -118,25 +118,34 @@ class piCamBot:
             GPIO.setmode(GPIO.BOARD)
             GPIO.setup(gpio, GPIO.OUT)
 
+        threads = []
+
         # set up telegram thread
-        telegram_thread = threading.Thread(target=self.fetchTelegramUpdates)
+        telegram_thread = threading.Thread(target=self.fetchTelegramUpdates, name="Telegram")
         telegram_thread.daemon = True
         telegram_thread.start()
+        threads.append(telegram_thread)
 
         # set up watch thread for captured images
-        image_watch_thread = threading.Thread(target=self.fetchImageUpdates)
+        image_watch_thread = threading.Thread(target=self.fetchImageUpdates, name="Image watch")
         image_watch_thread.daemon = True
         image_watch_thread.start()
+        threads.append(image_watch_thread)
 
         # set up PIR thread
         if self.config['pir']['enable']:
-            pir_thread = threading.Thread(target=self.watchPIR)
+            pir_thread = threading.Thread(target=self.watchPIR, name="PIR")
             pir_thread.daemon = True
             pir_thread.start()
+            threads.append(pir_thread)
 
         while True:
-            time.sleep(0.1)
-            # TODO XXX FIXME check if all threads are still alive?
+            time.sleep(1)
+            # check if all threads are still alive
+            for thread in threads:
+                if not thread.isAlive():
+                    self.logger.error('Thread "%s" died, bailing out.' % thread.name)
+                    return
 
     def fetchTelegramUpdates(self):
         self.logger.info('Setting up telegram thread')
@@ -431,6 +440,7 @@ class piCamBot:
         GPIO.setup(gpio, GPIO.IN)
         while True:
             if not self.report_motion:
+                # motion detection currently disabled
                 time.sleep(1)
                 continue
 
