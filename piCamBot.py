@@ -13,7 +13,7 @@
 #   - check return code of raspistill
 #
 
-import RPi.GPIO as GPIO
+import importlib
 import inotify.adapters
 import json
 import logging
@@ -43,6 +43,8 @@ class piCamBot:
         self.armed = False
         # telegram bot
         self.bot = None
+        # GPIO module, dynamically loaded depending on config
+        self.GPIO = None
 
     def run(self):
         # setup logging, we want to log both to stdout and a file
@@ -69,6 +71,10 @@ class piCamBot:
         if self.config['pir']['enable'] and self.config['motion']['enable']:
             self.logger.error('Enabling both PIR and motion based capturing is not supported')
             sys.exit(1)
+
+        # check if we need GPIO support
+        if self.config['buzzer']['enable'] or self.config['pir']['enable']:
+            self.GPIO = importlib.import_module('RPi.GPIO')
 
         # register signal handler, needs config to be initialized
         signal.signal(signal.SIGHUP, self.signalHandler)
@@ -118,8 +124,8 @@ class piCamBot:
         # set up buzzer if configured
         if self.config['buzzer']['enable']:
             gpio = self.config['buzzer']['gpio']
-            GPIO.setmode(GPIO.BOARD)
-            GPIO.setup(gpio, GPIO.OUT)
+            self.GPIO.setmode(self.GPIO.BOARD)
+            self.GPIO.setup(gpio, self.GPIO.OUT)
 
         threads = []
 
@@ -448,15 +454,15 @@ class piCamBot:
             buzzer_sequence = self.config['buzzer']['seq_motion']
 
         gpio = self.config['pir']['gpio']
-        GPIO.setmode(GPIO.BOARD)
-        GPIO.setup(gpio, GPIO.IN)
+        self.GPIO.setmode(self.GPIO.BOARD)
+        self.GPIO.setup(gpio, self.GPIO.IN)
         while True:
             if not self.armed:
                 # motion detection currently disabled
                 time.sleep(1)
                 continue
 
-            pir = GPIO.input(gpio)
+            pir = self.GPIO.input(gpio)
             if pir == 0:
                 # no motion detected
                 time.sleep(1)
@@ -479,20 +485,20 @@ class piCamBot:
         duration = self.config['buzzer']['duration']
         for i in sequence:
             if i == '1':
-                GPIO.output(gpio, 1)
+                self.GPIO.output(gpio, 1)
             elif i == '0':
-                GPIO.output(gpio, 0)
+                self.GPIO.output(gpio, 0)
             else:
                 self.logger.warnprint('unknown pattern in sequence: %s', i)
             time.sleep(duration)
-        GPIO.output(gpio, 0)
+        self.GPIO.output(gpio, 0)
 
     def signalHandler(self, signal, frame):
         # always disable buzzer
         if self.config['buzzer']['enable']:
             gpio = self.config['buzzer']['gpio']
-            GPIO.output(gpio, 0)
-            GPIO.cleanup()
+            self.GPIO.output(gpio, 0)
+            self.GPIO.cleanup()
 
         msg = 'Caught signal %d, terminating now.' % signal
         self.logger.error(msg)

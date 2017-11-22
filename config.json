@@ -31,7 +31,7 @@
     "//": "PIR (passive infrared) sensor related settings (for motion detection via PIR sensor)",
     "pir": {
         "//": "enable motion detection via PIR sensor?",
-	"enable": true,
+	"enable": false,
 
 	"//": "GPIO input pin for reading from sensor",
 	"gpio": 8,
