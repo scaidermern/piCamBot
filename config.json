@@ -16,7 +16,7 @@
 	"delete_images": true,
 
 	"//": "automatically arm device directly after startup?",
-	"arm": true
+	"arm": false
     },
 
     "//": "telegram-related settings",
