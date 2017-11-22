@@ -24,7 +24,7 @@ To install the necessary software on Raspbian, Debian or a similar distribution 
   - `pip install inotify` or for python3 `pip3 install inotify`
   
 ## Configuration
-Edit `config.json`. Enter your Telegram `token` and `owner_ids`. See these [instructions for obtaining your Telegram user ID](https://stackoverflow.com/questions/31078710/how-to-obtain-telegram-chat-id-for-a-specific-user). Alternatively just run piCamBot and send a message to your bot. piCamBot will log messages from unknown users and write out their user IDs.
+Edit `config.json`. In section `telegram` enter your Telegram `token` and `owner_ids`. See these [instructions for obtaining your Telegram user ID](https://stackoverflow.com/questions/31078710/how-to-obtain-telegram-chat-id-for-a-specific-user). Alternatively just add your Telegram token and a random owner ID, run piCamBot and send a message to your bot. piCamBot will log messages from unknown users and write out their user IDs.
 
 If you aren't using a Raspberry Pi then you need to change `pir`:`capture_cmd` and `capture`:`cmd` to use a different command than `raspistill`.
 
