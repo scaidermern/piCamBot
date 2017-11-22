@@ -30,12 +30,14 @@ If you aren't using a Raspberry Pi then you need to change `pir`:`capture_cmd` a
 
 Either enable `pir` (when using a PIR sensor) or `motion` (when no PIR sensor is available). It is highly recommended to use a PIR sensor since it works better than motion in my experience.
 
-Note: you can't enable `pir` and `motion` at the same time. However you can disable both and still use piCamBot to perform manual camera captures.
+Note: You can't enable `pir` and `motion` at the same time. However you can disable both and still use piCamBot to perform manual camera captures.
 
 ### 1a) Configuration using a PIR sensor
 Set a correct `pir`:`gpio` port. You can use `python test_pir.py` to check if the PIR is working and a correct gpio port has been configured.
 
 ### 1b) Configuration using motion software
+Note: It is highly recommended to use a PIR sensor instead. The code for using motion instead is not really maintained. Also, in most cases a PIR sensor works way better than motion.
+
 Check that the `pid_file` path is correct. It must match the `process_id_file` setting in your `motion.conf`. Also check that `general`:`image_dir` matches your `motion.conf`'s `target_dir`. Edit `motion.conf` and adjust `rotate`, `width`, `height` to your camera. Also adjust `threshold` and `noise_level` to your environment (good luck with that...). `daemon` mode must be enabled for piCamBot!
 
 Ideally run motion separately to adjust all these settings until it matches your expected results. Afterwards try to use it with piCamBot.
