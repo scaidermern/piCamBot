@@ -39,8 +39,8 @@ class piCamBot:
         self.config = None
         # logging stuff
         self.logger = None
-        # check for motion and send capture images to owners?
-        self.report_motion = False
+        # check for motion and send captured images to owners?
+        self.armed = False
         # telegram bot
         self.bot = None
 
@@ -75,6 +75,9 @@ class piCamBot:
         signal.signal(signal.SIGINT, self.signalHandler)
         signal.signal(signal.SIGQUIT, self.signalHandler)
         signal.signal(signal.SIGTERM, self.signalHandler)
+
+        # set default state
+        self.armed = self.config['general']['arm']
 
         self.bot = telegram.Bot(self.config['telegram']['token'])
 
@@ -204,7 +207,7 @@ class piCamBot:
             self.logger.warn('Unknown command: "%s"' % message.text)
 
     def commandArm(self, message):
-        if self.report_motion:
+        if self.armed:
             message.reply_text('Motion-based capturing already enabled.')
             return
 
@@ -219,7 +222,7 @@ class piCamBot:
             if len(buzzer_sequence) > 0:
                 self.playSequence(buzzer_sequence)
 
-        self.report_motion = True
+        self.armed = True
 
         if not self.config['motion']['enable']:
             # we are done, PIR-mode needs no further steps
@@ -249,7 +252,7 @@ class piCamBot:
         message.reply_text('Motion software still not running. Please check status later.')
 
     def commandDisarm(self, message):
-        if not self.report_motion:
+        if not self.armed:
             message.reply_text('Motion-based capturing not enabled.')
             return
 
@@ -260,7 +263,7 @@ class piCamBot:
             if len(buzzer_sequence) > 0:
                 self.playSequence(buzzer_sequence)
 
-        self.report_motion = False 
+        self.armed = False
 
         if not self.config['motion']['enable']:
             # we are done, PIR-mode needs no further steps
@@ -318,7 +321,7 @@ class piCamBot:
         message.reply_text('Kill signal has been sent.')
 
     def commandStatus(self, message):
-        if not self.report_motion:
+        if not self.armed:
             message.reply_text('Motion-based capturing not enabled.')
             return
 
@@ -405,7 +408,7 @@ class piCamBot:
                 continue
 
             self.logger.info('New image file: "%s"' % filepath)
-            if self.report_motion:
+            if self.armed:
                 for owner_id in self.config['telegram']['owner_ids']:
                     try:
                         self.bot.sendPhoto(chat_id=owner_id, caption=filepath, photo=open(filepath, 'rb'))
@@ -439,7 +442,7 @@ class piCamBot:
         GPIO.setmode(GPIO.BOARD)
         GPIO.setup(gpio, GPIO.IN)
         while True:
-            if not self.report_motion:
+            if not self.armed:
                 # motion detection currently disabled
                 time.sleep(1)
                 continue

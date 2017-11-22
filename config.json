@@ -13,7 +13,10 @@
 
 	"//": "delete captured image after sending them? recommended, otherwise your disk runs full",
 	"//": "note: this also purges (removes and re-creates) the image directory on startup",
-	"delete_images": true
+	"delete_images": true,
+
+	"//": "automatically arm device directly after startup?",
+	"arm": true
     },
 
     "//": "telegram-related settings",
