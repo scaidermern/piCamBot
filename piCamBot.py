@@ -208,7 +208,7 @@ class piCamBot:
 
     def commandArm(self, message):
         if self.armed:
-            message.reply_text('Motion-based capturing already enabled.')
+            message.reply_text('Motion-based capturing already enabled! Nothing to do.')
             return
 
         if not self.config['motion']['enable'] and not self.config['pir']['enable']:
@@ -253,7 +253,7 @@ class piCamBot:
 
     def commandDisarm(self, message):
         if not self.armed:
-            message.reply_text('Motion-based capturing not enabled.')
+            message.reply_text('Motion-based capturing not enabled! Nothing to do.')
             return
 
         message.reply_text('Disabling motion-based capturing...')
