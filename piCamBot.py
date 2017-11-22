@@ -64,11 +64,11 @@ class piCamBot:
             self.logger.error(str(e))
             self.logger.error(traceback.format_exc())
             self.logger.error("Could not parse config file")
-            return
+            sys.exit(1)
         # check for conflicting config options
         if self.config['pir']['enable'] and self.config['motion']['enable']:
             self.logger.error('Enabling both PIR and motion based capturing is not supported')
-            return
+            sys.exit(1)
 
         # register signal handler, needs config to be initialized
         signal.signal(signal.SIGHUP, self.signalHandler)
@@ -146,9 +146,18 @@ class piCamBot:
             time.sleep(1)
             # check if all threads are still alive
             for thread in threads:
-                if not thread.isAlive():
-                    self.logger.error('Thread "%s" died, bailing out.' % thread.name)
-                    return
+                if thread.isAlive():
+                    continue
+
+                # something went wrong, bailing out
+                msg = 'Thread "%s" died, terminating now.' % thread.name
+                self.logger.error(msg)
+                for owner_id in self.config['telegram']['owner_ids']:
+                    try:
+                        self.bot.sendMessage(chat_id=owner_id, text=msg)
+                    except Exception as e:
+                        pass
+                sys.exit(1)
 
     def fetchTelegramUpdates(self):
         self.logger.info('Setting up telegram thread')
@@ -485,13 +494,13 @@ class piCamBot:
             GPIO.output(gpio, 0)
             GPIO.cleanup()
 
-        self.logger.error('Caught signal %d, terminating now.', signal)
+        msg = 'Caught signal %d, terminating now.' % signal
+        self.logger.error(msg)
         for owner_id in self.config['telegram']['owner_ids']:
             try:
-                self.bot.sendMessage(chat_id=owner_id, text='Caught signal %d, terminating now.' % signal)
+                self.bot.sendMessage(chat_id=owner_id, text=msg)
             except Exception as e:
-                # most likely network problem or user has blocked the bot
-                self.logger.warn('Could not send hello to user %s: %s' % (owner_id, str(e)))
+                pass
         sys.exit(1)
 
 if __name__ == '__main__':
