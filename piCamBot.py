@@ -172,14 +172,13 @@ class piCamBot:
                 # request updates after the last update_id
                 # timeout: how long to poll for messages
                 for update in self.bot.getUpdates(offset=self.update_id, timeout=10):
-                    # chat_id is required to reply to any message
-                    chat_id = update.message.chat_id
-                    self.update_id = update.update_id + 1
-
                     # skip updates without a message
                     if not update.message:
                         continue
 
+                    # chat_id is required to reply to any message
+                    chat_id = update.message.chat_id
+                    self.update_id = update.update_id + 1
                     message = update.message
 
                     # skip messages from non-owner
