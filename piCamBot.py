@@ -65,7 +65,7 @@ class piCamBot:
         except Exception as e:
             self.logger.error(str(e))
             self.logger.error(traceback.format_exc())
-            self.logger.error("Could not parse config file")
+            self.logger.error("Could not parse config file config.json")
             sys.exit(1)
         # check for conflicting config options
         if self.config['pir']['enable'] and self.config['motion']['enable']:
@@ -85,7 +85,13 @@ class piCamBot:
         # set default state
         self.armed = self.config['general']['arm']
 
-        self.bot = telegram.Bot(self.config['telegram']['token'])
+        try:
+            self.bot = telegram.Bot(self.config['telegram']['token'])
+        except Exception as e:
+            self.logger.error(str(e))
+            self.logger.error(traceback.format_exc())
+            self.logger.error("Could not start telegram bot. Wrong telegram API token?")
+            sys.exit(1)
 
         # check if API access works. try again on network errors,
         # might happen after boot while the network is still being set up
