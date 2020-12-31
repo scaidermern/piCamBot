@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # dependencies:
@@ -24,29 +24,31 @@ import shutil
 import signal
 import subprocess
 import sys
-import telegram
 import threading
 import time
-import traceback
-from six.moves import range
 from telegram.error import NetworkError, Unauthorized
+from telegram.ext import Updater, MessageHandler, Filters
 
 class piCamBot:
     def __init__(self):
-        # id for keeping track of the last seen message
-        self.update_id = None
         # config from config file
         self.config = None
         # logging stuff
         self.logger = None
         # check for motion and send captured images to owners?
         self.armed = False
-        # telegram bot
-        self.bot = None
+        # telegram bot updater
+        self.updater = None
         # GPIO module, dynamically loaded depending on config
         self.GPIO = None
 
     def run(self):
+        try:
+            self.runInternal()
+        finally:
+            self.cleanup()
+
+    def runInternal(self):
         # setup logging, we want to log both to stdout and a file
         logFormat = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(__name__)
@@ -62,11 +64,10 @@ class piCamBot:
 
         try:
             self.config = json.load(open('config.json', 'r'))
-        except Exception as e:
-            self.logger.error(str(e))
-            self.logger.error(traceback.format_exc())
-            self.logger.error("Could not parse config file config.json")
+        except:
+            self.logger.error('Could not parse config file:', exc_info=True)
             sys.exit(1)
+
         # check for conflicting config options
         if self.config['pir']['enable'] and self.config['motion']['enable']:
             self.logger.error('Enabling both PIR and motion based capturing is not supported')
@@ -85,47 +86,46 @@ class piCamBot:
         # set default state
         self.armed = self.config['general']['arm']
 
-        try:
-            self.bot = telegram.Bot(self.config['telegram']['token'])
-        except Exception as e:
-            self.logger.error(str(e))
-            self.logger.error(traceback.format_exc())
-            self.logger.error("Could not start telegram bot. Wrong telegram API token?")
-            sys.exit(1)
+        self.updater = Updater(self.config['telegram']['token'])
+        dispatcher = self.updater.dispatcher
+        bot = self.updater.bot
 
         # check if API access works. try again on network errors,
         # might happen after boot while the network is still being set up
-        self.logger.info('Waiting for network and API to become accessible...')
+        self.logger.info('Waiting for network and Telegram API to become accessible...')
+        telegramAccess = False
         timeout = self.config['general']['startup_timeout']
         timeout = timeout if timeout > 0 else sys.maxsize
         for i in range(timeout):
             try:
-                self.logger.info(self.bot.getMe())
-                self.logger.info('API access working!')
+                self.logger.info(bot.get_me())
+                self.logger.info('Telegram API access working!')
+                telegramAccess = True
                 break # success
             except NetworkError as e:
-                pass # don't log, just ignore
-            except Exception as e:
-                # log other exceptions, then break
-                self.logger.error(str(e))
-                self.logger.error(traceback.format_exc())
+                pass # don't log network errors, just ignore
+            except Unauthorized as e:
+                # probably wrong access token
+                self.logger.error('Error while trying to access Telegram API, wrong Telegram access token?', exc_info=True)
                 raise
+            except:
+                # unknown exception, log and then bail out
+                self.logger.error('Error while trying to access Telegram API:', exc_info=True)
+                raise
+
             time.sleep(1)
+
+        if not telegramAccess:
+            self.logger.error('Could not access Telegram API within time, shutting down')
+            sys.exit(1)
 
         # pretend to be nice to our owners
         for owner_id in self.config['telegram']['owner_ids']:
             try:
-                self.bot.sendMessage(chat_id=owner_id, text='Hello there, I\'m back!')
-            except Exception as e:
+                bot.sendMessage(chat_id=owner_id, text='Hello there, I\'m back!')
+            except:
                 # most likely network problem or user has blocked the bot
-                self.logger.warn('Could not send hello to user %s: %s' % (owner_id, str(e)))
-
-        # get the first pending update_id, this is so we can skip over it in case
-        # we get an "Unauthorized" exception
-        try:
-            self.update_id = self.bot.getUpdates()[0].update_id
-        except IndexError:
-            self.update_id = None
+                self.logger.warning('Could not send hello to user %s:' % owner_id, exc_info=True)
 
         # set up buzzer if configured
         if self.config['buzzer']['enable']:
@@ -134,12 +134,6 @@ class piCamBot:
             self.GPIO.setup(gpio, self.GPIO.OUT)
 
         threads = []
-
-        # set up telegram thread
-        telegram_thread = threading.Thread(target=self.fetchTelegramUpdates, name="Telegram")
-        telegram_thread.daemon = True
-        telegram_thread.start()
-        threads.append(telegram_thread)
 
         # set up watch thread for captured images
         image_watch_thread = threading.Thread(target=self.fetchImageUpdates, name="Image watch")
@@ -154,6 +148,13 @@ class piCamBot:
             pir_thread.start()
             threads.append(pir_thread)
 
+        # register message handler and start polling
+        # note: we don't register each command individually because then we
+        # wouldn't be able to check the owner_id, instead we register for text
+        # messages
+        dispatcher.add_handler(MessageHandler(Filters.text, self.performCommand))
+        self.updater.start_polling()
+
         while True:
             time.sleep(1)
             # check if all threads are still alive
@@ -166,67 +167,47 @@ class piCamBot:
                 self.logger.error(msg)
                 for owner_id in self.config['telegram']['owner_ids']:
                     try:
-                        self.bot.sendMessage(chat_id=owner_id, text=msg)
-                    except Exception as e:
+                        bot.sendMessage(chat_id=owner_id, text=msg)
+                    except:
+                        self.logger.error('Exception while trying to notify owners:', exc_info=True)
                         pass
                 sys.exit(1)
 
-    def fetchTelegramUpdates(self):
-        self.logger.info('Setting up telegram thread')
-        while True:
-            try:
-                # request updates after the last update_id
-                # timeout: how long to poll for messages
-                for update in self.bot.getUpdates(offset=self.update_id, timeout=10):
-                    # skip updates without a message
-                    if not update.message:
-                        continue
+    def performCommand(self, update, context):
+        message = update.message
+        # skip messages from non-owner
+        if message.from_user.id not in self.config['telegram']['owner_ids']:
+            self.logger.warning('Received message from unknown user "%s": "%s"' % (message.from_user, message.text))
+            message.reply_text("I'm sorry, Dave. I'm afraid I can't do that.")
+            return
 
-                    # chat_id is required to reply to any message
-                    chat_id = update.message.chat_id
-                    self.update_id = update.update_id + 1
-                    message = update.message
+        self.logger.info('Received message from user "%s": "%s"' % (message.from_user, message.text))
 
-                    # skip messages from non-owner
-                    if message.from_user.id not in self.config['telegram']['owner_ids']:
-                        self.logger.warn('Received message from unknown user "%s": "%s"' % (message.from_user, message.text))
-                        message.reply_text("I'm sorry, Dave. I'm afraid I can't do that.")
-                        continue
-
-                    self.logger.info('Received message from user "%s": "%s"' % (message.from_user, message.text))
-                    self.performCommand(message)
-            except NetworkError as e:
-                time.sleep(1)
-            except Exception as e:
-                self.logger.warn(str(e))
-                self.logger.warn(traceback.format_exc())
-                time.sleep(1)
-
-    def performCommand(self, message):
-        cmd = message.text.lower().rstrip()
+        cmd = update.message.text.lower().rstrip()
         if cmd == '/start':
             # ignore default start command
             return
         if cmd == '/arm':
-            self.commandArm(message)
+            self.commandArm(update)
         elif cmd == '/disarm':
-            self.commandDisarm(message)
+            self.commandDisarm(update)
         elif cmd == 'kill':
-            self.commandKill(message)
+            self.commandKill(update)
         elif cmd == '/status':
-            self.commandStatus(message)
+            self.commandStatus(update)
         elif cmd == '/capture':
             # if motion software is running we have to stop and restart it for capturing images
             stopStart = self.isMotionRunning()
             if stopStart:
-                self.commandDisarm(message)
-            self.commandCapture(message)
+                self.commandDisarm(update)
+            self.commandCapture(update)
             if stopStart:
-                self.commandArm(message)
+                self.commandArm(update)
         else:
-            self.logger.warn('Unknown command: "%s"' % message.text)
+            self.logger.warning('Unknown command: "%s"' % update.message.text)
 
-    def commandArm(self, message):
+    def commandArm(self, update):
+        message = update.message
         if self.armed:
             message.reply_text('Motion-based capturing already enabled! Nothing to do.')
             return
@@ -256,10 +237,9 @@ class piCamBot:
         args = shlex.split(self.config['motion']['cmd'])
         try:
             subprocess.call(args)
-        except Exception as e:
-            self.logger.warn(str(e))
-            self.logger.warn(traceback.format_exc())
-            message.reply_text('Error: Failed to start motion software: %s' % str(e))
+        except:
+            self.logger.error('Failed to start motion software:', exc_info=True)
+            message.reply_text('Error: Failed to start motion software. See log for details.')
             return
 
         # wait until motion is running to prevent
@@ -271,7 +251,8 @@ class piCamBot:
             time.sleep(1)
         message.reply_text('Motion software still not running. Please check status later.')
 
-    def commandDisarm(self, message):
+    def commandDisarm(self, update):
+        message = update.message
         if not self.armed:
             message.reply_text('Motion-based capturing not enabled! Nothing to do.')
             return
@@ -326,21 +307,22 @@ class piCamBot:
             time.sleep(1)
         message.reply_text('Error: Unable to stop motion software.')
 
-    def commandKill(self, message):
+    def commandKill(self, update):
+        message = update.message
         if not self.config['motion']['enable']:
             message.reply_text('Error: kill command only supported when motion is enabled')
             return
         args = shlex.split('killall -9 %s' % self.config['motion']['kill_name'])
         try:
             subprocess.call(args)
-        except Exception as e:
-            self.logger.warn(str(e))
-            self.logger.warn(traceback.format_exc())
-            message.reply_text('Error: Failed to send kill signal: %s' % str(e))
+        except:
+            self.logger.error('Failed to send kill signal:', exc_info=True)
+            message.reply_text('Error: Failed to send kill signal. See log for details.')
             return
         message.reply_text('Kill signal has been sent.')
 
-    def commandStatus(self, message):
+    def commandStatus(self, update):
+        message = update.message
         if not self.armed:
             message.reply_text('Motion-based capturing not enabled.')
             return
@@ -359,7 +341,8 @@ class piCamBot:
         else:
             message.reply_text('Motion-based capturing enabled.')
 
-    def commandCapture(self, message):
+    def commandCapture(self, update):
+        message = update.message
         message.reply_text('Capture in progress, please wait...')
 
         if self.config['buzzer']['enable']:
@@ -368,18 +351,15 @@ class piCamBot:
                 self.playSequence(buzzer_sequence)
 
         capture_file = self.config['capture']['file']
-        if sys.version_info.major == 2: # yay! python 2 vs 3 unicode fuckup
-            capture_file = capture_file.encode('utf-8')
         if os.path.exists(capture_file):
             os.remove(capture_file)
 
         args = shlex.split(self.config['capture']['cmd'])
         try:
             subprocess.call(args)
-        except Exception as e:
-            self.logger.warn(str(e))
-            self.logger.warn(traceback.format_exc())
-            message.reply_text('Error: Capture failed: %s' % str(e))
+        except:
+            self.logger.error('Capture failed:', exc_info=True)
+            message.reply_text('Error: Capture failed. See log for details.')
             return
 
         if not os.path.exists(capture_file):
@@ -395,8 +375,6 @@ class piCamBot:
 
         # set up image directory watch
         watch_dir = self.config['general']['image_dir']
-        if sys.version_info.major == 2: # yay! python 2 vs 3 unicode fuckup
-            watch_dir = watch_dir.encode('utf-8')
         # purge (remove and re-create) if we allowed to do so
         if self.config['general']['delete_images']:
             shutil.rmtree(watch_dir, ignore_errors=True)
@@ -419,10 +397,6 @@ class piCamBot:
             if not any(type in type_names for type in matched_types):
                 continue
 
-            # check for image
-            if sys.version_info[0] == 3: # yay! python 2 vs 3 unicode fuckup
-                watch_path = watch_path.decode()
-                filename = filename.decode()
             filepath = ('%s/%s' % (watch_path, filename))
 
             if not filename.endswith('.jpg'):
@@ -431,12 +405,13 @@ class piCamBot:
 
             self.logger.info('New image file: "%s"' % filepath)
             if self.armed:
+                bot = self.updater.dispatcher.bot
                 for owner_id in self.config['telegram']['owner_ids']:
                     try:
-                        self.bot.sendPhoto(chat_id=owner_id, caption=filepath, photo=open(filepath, 'rb'))
-                    except Exception as e:
+                        bot.sendPhoto(chat_id=owner_id, caption=filepath, photo=open(filepath, 'rb'))
+                    except:
                         # most likely network problem or user has blocked the bot
-                        self.logger.warn('Could not send image to user %s: %s' % (owner_id, str(e)))
+                        self.logger.warning('Could not send image to user %s: %s' % owner_id, exc_info=True)
 
             # always delete image, even if reporting is disabled
             if self.config['general']['delete_images']:
@@ -482,10 +457,9 @@ class piCamBot:
 
             try:
                 subprocess.call(args)
-            except Exception as e:
-                self.logger.warn(str(e))
-                self.logger.warn(traceback.format_exc())
-                message.reply_text('Error: Capture failed: %s' % str(e))
+            except:
+                self.logger.error('Error: Capture failed:', exc_info=True)
+                message.reply_text('Error: Capture failed. See log for details.')
 
     def playSequence(self, sequence):
         gpio = self.config['buzzer']['gpio']
@@ -496,24 +470,45 @@ class piCamBot:
             elif i == '0':
                 self.GPIO.output(gpio, 0)
             else:
-                self.logger.warnprint('unknown pattern in sequence: %s', i)
+                self.logger.warning('unknown pattern in sequence: %s', i)
             time.sleep(duration)
         self.GPIO.output(gpio, 0)
 
-    def signalHandler(self, signal, frame):
-        # always disable buzzer
-        if self.config['buzzer']['enable']:
-            gpio = self.config['buzzer']['gpio']
-            self.GPIO.output(gpio, 0)
-            self.GPIO.cleanup()
+    def cleanup(self):
+        try:
+            if self.config['buzzer']['enable']:
+                self.logger.info('Disabling buzzer and cleaning up GPIO')
+                gpio = self.config['buzzer']['gpio']
+                self.GPIO.output(gpio, 0)
+                self.GPIO.cleanup()
+        except:
+            pass
 
+        if self.updater.running:
+            try:
+                self.logger.info('Stopping telegram updater')
+                self.updater.stop()
+            except:
+                pass
+
+        self.logger.info('Cleanup done')
+
+    def signalHandler(self, signal, frame):
         msg = 'Caught signal %d, terminating now.' % signal
         self.logger.error(msg)
-        for owner_id in self.config['telegram']['owner_ids']:
+
+        # try to inform owners
+        if self.updater.running:
             try:
-                self.bot.sendMessage(chat_id=owner_id, text=msg)
-            except Exception as e:
+                bot = self.updater.dispatcher.bot
+                for owner_id in self.config['telegram']['owner_ids']:
+                    try:
+                        bot.sendMessage(chat_id=owner_id, text=msg)
+                    except:
+                        pass
+            except:
                 pass
+
         sys.exit(1)
 
 if __name__ == '__main__':

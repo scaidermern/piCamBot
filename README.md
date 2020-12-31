@@ -10,18 +10,17 @@ This is a simple Telegram bot that acts as a security camera. It is intented to 
 - PIR sensor (e.g. HC-SR501) or [motion](http://lavrsen.dk/foswiki/bin/view/Motion/WebHome) software (using the PIR sensor is recommended, it works way better than using motion software)
 - Piezo buzzer (optional)
 - [Telegram](https://telegram.org/) account and a [Telegram bot](https://core.telegram.org/bots)
-- python (version 2 or 3):
+- python (version 3):
   - [RPi.GPIO](https://sourceforge.net/projects/raspberry-gpio-python/) (optional, for controlling a PIR sensor or buzzer)
   - [python-telegram-bot](https://github.com/python-telegram-bot/python-telegram-bot)
   - [PyInotify](https://github.com/dsoprea/PyInotify)
 
 To install the necessary software on Raspbian, Debian or a similar distribution use the following commands:
 - as root:
-  - `apt-get install python-rpi.gpio` or for python3 `apt-get install python3-rpi.gpio` (optional, probably already pre-installed on your Pi)
-  - `apt-get install python-pip` or for python3 `apt-get install python3-pip`
+  - `apt install python3-rpi.gpio` (optional, for PIR or buzzer support)
+  - `apt install python3-pip`
 - as regular user:
-  - `pip install python-telegram-bot` or for python3 `pip3 install python-telegram-bot`
-  - `pip install inotify` or for python3 `pip3 install inotify`
+  - `pip3 install python-telegram-bot inotify`
   
 ## Configuration
 Edit `config.json`. In section `telegram` enter your Telegram `token` and `owner_ids`. See these [instructions for obtaining your Telegram user ID](https://stackoverflow.com/questions/31078710/how-to-obtain-telegram-chat-id-for-a-specific-user). Alternatively just add your Telegram token and a random owner ID, run piCamBot and send a message to your bot. piCamBot will log messages from unknown users and write out their user IDs.
@@ -33,7 +32,7 @@ Either enable `pir` (when using a PIR sensor) or `motion` (when no PIR sensor is
 Note: You can't enable `pir` and `motion` at the same time. However you can disable both and still use piCamBot to perform manual camera captures.
 
 ### 1a) Configuration using a PIR sensor
-Set a correct `pir`:`gpio` port. You can use `python test_pir.py` to check if the PIR is working and a correct gpio port has been configured.
+Set a correct `pir`:`gpio` port. You can use `python3 test_pir.py` to check if the PIR is working and a correct gpio port has been configured.
 
 ### 1b) Configuration using motion software
 Note: It is highly recommended to use a PIR sensor instead. The code for using motion instead is not really maintained. Also, in most cases a PIR sensor works way better than motion.
@@ -44,7 +43,7 @@ Ideally run motion separately to adjust all these settings until it matches your
 
 ### 2) Configuring a buzzer
 
-You can enable acoustic alarms, e.g. with a piezo buzzer. Enable the buzzer via `buzzer`:`enable` and set `buzzer`:`gpio` accordingly. You can also define custom buzzer sequences for various actions. To see if the buzzer is working and the correct gpio port has been set you can run `python test_buzzer.py`.
+You can enable acoustic alarms, e.g. with a piezo buzzer. Enable the buzzer via `buzzer`:`enable` and set `buzzer`:`gpio` accordingly. You can also define custom buzzer sequences for various actions. To see if the buzzer is working and the correct gpio port has been set you can run `python3 test_buzzer.py`.
 
 ### Optional: Use a tmpfs for captured images
 Especially when using a Raspberry Pi it is a good idea to write captured images to a tmpfs. This increases the lifespan if your sdcard. Using the standard configuration piCamBot writes its captures to `/tmp/piCamBot/`. To mount `/tmp/` as tmpfs add the following line to your `/etc/fstab`:
@@ -54,7 +53,7 @@ tmpfs           /tmp            tmpfs   nosuid,size=25%   0       0
 After a reboot `/tmp/` should be mounted as tmpfs.
 
 ## Starting the bot
-Execute `python piCamBot.py`. The bot will automatically send a greeting message to all owners if Telegram access is working. For troubleshooting take a look at its log files inside the piCamBot directory. It is recommended to start the bot automatically after boot, e.g. via a crontab entry or init script.
+Execute `python3 piCamBot.py`. The bot will automatically send a greeting message to all owners if Telegram access is working. For troubleshooting take a look at its log files inside the piCamBot directory. It is recommended to start the bot automatically after boot, e.g. via a crontab entry or init script.
 
 ## Controlling the bot
 The bot will start with motion-based capturing being disabled.
