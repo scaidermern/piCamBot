@@ -30,7 +30,7 @@ config = json.load(open('config.json', 'r'))
 gpio = config['buzzer']['gpio']
 duration = config['buzzer']['duration']
 sequence = config['buzzer']['seq_motion']
-GPIO.setmode(GPIO.BOARD)
+GPIO.setmode(GPIO.BCM)
 GPIO.setup(gpio, GPIO.OUT)
 signal.signal(signal.SIGINT, signalHandler)
 while True:

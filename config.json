@@ -34,7 +34,7 @@
 	"enable": false,
 
 	"//": "GPIO input pin for reading from sensor",
-	"gpio": 8,
+	"gpio": 17,
 
 	"//": "command for creating snapshots if motion is detected",
 	"capture_cmd": "raspistill -a 12 -dt -vf -hf -n -t 1500 -o /tmp/piCamBot/piCamBot_%d.jpg",
@@ -81,7 +81,7 @@
 	"enable": false,
 
 	"//": "GPIO output pin for enabling/disabling buzzer",
-	"gpio": 26,
+	"gpio": 16,
 
 	"//": "duration of on and off periods for sequences, in seconds",
 	"duration": 0.2,

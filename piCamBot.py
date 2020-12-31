@@ -130,7 +130,7 @@ class piCamBot:
         # set up buzzer if configured
         if self.config['buzzer']['enable']:
             gpio = self.config['buzzer']['gpio']
-            self.GPIO.setmode(self.GPIO.BOARD)
+            self.GPIO.setmode(self.GPIO.BCM)
             self.GPIO.setup(gpio, self.GPIO.OUT)
 
         threads = []
@@ -436,7 +436,7 @@ class piCamBot:
             buzzer_sequence = self.config['buzzer']['seq_motion']
 
         gpio = self.config['pir']['gpio']
-        self.GPIO.setmode(self.GPIO.BOARD)
+        self.GPIO.setmode(self.GPIO.BCM)
         self.GPIO.setup(gpio, self.GPIO.IN)
         while True:
             if not self.armed:

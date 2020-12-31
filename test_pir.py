@@ -13,7 +13,7 @@ def signalHandler(signal, frame):
 
 config = json.load(open('config.json', 'r'))
 gpio = config['pir']['gpio']
-GPIO.setmode(GPIO.BOARD)
+GPIO.setmode(GPIO.BCM)
 GPIO.setup(gpio, GPIO.IN)
 signal.signal(signal.SIGINT, signalHandler)
 while True:
