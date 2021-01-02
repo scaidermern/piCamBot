@@ -19,6 +19,7 @@ import json
 import logging
 import logging.handlers
 import os
+import queue
 import shlex
 import shutil
 import signal
@@ -39,6 +40,14 @@ class piCamBot:
         self.armed = False
         # telegram bot updater
         self.updater = None
+        # movement detection via PIR enabled?
+        self.pir = False
+        # movement detection via motion software enabled?
+        self.motion = False
+        # buzzer enabled?
+        self.buzzer = False
+        # queue of sequences to play via buzzer
+        self.buzzerQueue = None
         # GPIO module, dynamically loaded depending on config
         self.GPIO = None
 
@@ -68,13 +77,17 @@ class piCamBot:
             self.logger.error('Could not parse config file:', exc_info=True)
             sys.exit(1)
 
+        self.pir = self.config['pir']['enable']
+        self.motion = self.config['motion']['enable']
+        self.buzzer = self.config['buzzer']['enable']
+
         # check for conflicting config options
-        if self.config['pir']['enable'] and self.config['motion']['enable']:
+        if self.pir and self.motion:
             self.logger.error('Enabling both PIR and motion based capturing is not supported')
             sys.exit(1)
 
         # check if we need GPIO support
-        if self.config['buzzer']['enable'] or self.config['pir']['enable']:
+        if self.buzzer or self.pir:
             self.GPIO = importlib.import_module('RPi.GPIO')
 
         # register signal handler, needs config to be initialized
@@ -127,11 +140,6 @@ class piCamBot:
                 # most likely network problem or user has blocked the bot
                 self.logger.warning('Could not send hello to user %s:' % owner_id, exc_info=True)
 
-        # set up buzzer if configured
-        if self.config['buzzer']['enable']:
-            gpio = self.config['buzzer']['gpio']
-            self.GPIO.setmode(self.GPIO.BCM)
-            self.GPIO.setup(gpio, self.GPIO.OUT)
 
         threads = []
 
@@ -142,11 +150,18 @@ class piCamBot:
         threads.append(image_watch_thread)
 
         # set up PIR thread
-        if self.config['pir']['enable']:
+        if self.pir:
             pir_thread = threading.Thread(target=self.watchPIR, name="PIR")
             pir_thread.daemon = True
             pir_thread.start()
             threads.append(pir_thread)
+
+        # set up buzzer thread
+        if self.buzzer:
+            buzzer_thread = threading.Thread(target=self.watchBuzzerQueue, name="buzzer")
+            buzzer_thread.daemon = True
+            buzzer_thread.start()
+            threads.append(buzzer_thread)
 
         # register message handler and start polling
         # note: we don't register each command individually because then we
@@ -212,20 +227,20 @@ class piCamBot:
             message.reply_text('Motion-based capturing already enabled! Nothing to do.')
             return
 
-        if not self.config['motion']['enable'] and not self.config['pir']['enable']:
+        if not self.pir and not self.motion:
             message.reply_text('Error: Cannot enable motion-based capturing since neither PIR nor motion is enabled!')
             return
 
         message.reply_text('Enabling motion-based capturing...')
 
-        if self.config['buzzer']['enable']:
-            buzzer_sequence = self.config['buzzer']['seq_arm']
-            if len(buzzer_sequence) > 0:
-                self.playSequence(buzzer_sequence)
+        if self.buzzer:
+            sequence = self.config['buzzer']['seq_arm']
+            if len(sequence) > 0:
+                self.buzzerQueue.put(sequence)
 
         self.armed = True
 
-        if not self.config['motion']['enable']:
+        if not self.motion:
             # we are done, PIR-mode needs no further steps
             return
 
@@ -259,14 +274,14 @@ class piCamBot:
 
         message.reply_text('Disabling motion-based capturing...')
 
-        if self.config['buzzer']['enable']:
-            buzzer_sequence = self.config['buzzer']['seq_disarm']
-            if len(buzzer_sequence) > 0:
-                self.playSequence(buzzer_sequence)
+        if self.buzzer:
+            sequence = self.config['buzzer']['seq_disarm']
+            if len(sequence) > 0:
+                self.buzzerQueue.put(sequence)
 
         self.armed = False
 
-        if not self.config['motion']['enable']:
+        if not self.motion:
             # we are done, PIR-mode needs no further steps
             return
 
@@ -309,7 +324,7 @@ class piCamBot:
 
     def commandKill(self, update):
         message = update.message
-        if not self.config['motion']['enable']:
+        if not self.motion:
             message.reply_text('Error: kill command only supported when motion is enabled')
             return
         args = shlex.split('killall -9 %s' % self.config['motion']['kill_name'])
@@ -332,7 +347,7 @@ class piCamBot:
             message.reply_text('Error: Motion-based capturing enabled but image dir not available!')
             return
      
-        if self.config['motion']['enable']:
+        if self.motion:
             # check if motion software is running or died unexpectedly
             if not self.isMotionRunning():
                 message.reply_text('Error: Motion-based capturing enabled but motion software not running!')
@@ -345,10 +360,10 @@ class piCamBot:
         message = update.message
         message.reply_text('Capture in progress, please wait...')
 
-        if self.config['buzzer']['enable']:
-            buzzer_sequence = self.config['buzzer']['seq_capture']
-            if len(buzzer_sequence) > 0:
-                self.playSequence(buzzer_sequence)
+        if self.buzzer:
+            sequence = self.config['buzzer']['seq_capture']
+            if len(sequence) > 0:
+                self.buzzerQueue.put(sequence)
 
         capture_file = self.config['capture']['file']
         if os.path.exists(capture_file):
@@ -432,8 +447,11 @@ class piCamBot:
     def watchPIR(self):
         self.logger.info('Setting up PIR watch thread')
 
-        if self.config['buzzer']['enable']:
-            buzzer_sequence = self.config['buzzer']['seq_motion']
+        sequence = None
+        if self.buzzer:
+            sequence = self.config['buzzer']['seq_motion']
+            if len(sequence) == 0:
+                sequence = None
 
         gpio = self.config['pir']['gpio']
         self.GPIO.setmode(self.GPIO.BCM)
@@ -451,8 +469,8 @@ class piCamBot:
                 continue
 
             self.logger.info('PIR: motion detected')
-            if self.config['buzzer']['enable'] and len(buzzer_sequence) > 0:
-                self.playSequence(buzzer_sequence)
+            if sequence:
+                self.buzzerQueue.put(sequence)
             args = shlex.split(self.config['pir']['capture_cmd'])
 
             try:
@@ -461,9 +479,21 @@ class piCamBot:
                 self.logger.error('Error: Capture failed:', exc_info=True)
                 message.reply_text('Error: Capture failed. See log for details.')
 
-    def playSequence(self, sequence):
+    def watchBuzzerQueue(self):
+        self.logger.info('Setting up buzzer thread')
+
         gpio = self.config['buzzer']['gpio']
+        self.GPIO.setmode(self.GPIO.BCM)
+        self.GPIO.setup(gpio, self.GPIO.OUT)
+
         duration = self.config['buzzer']['duration']
+
+        self.buzzerQueue = queue.SimpleQueue()
+        while True:
+            sequence = self.buzzerQueue.get(block=True, timeout=None)
+            self.playSequence(sequence, duration, gpio)
+
+    def playSequence(self, sequence, duration, gpio):
         for i in sequence:
             if i == '1':
                 self.GPIO.output(gpio, 1)
@@ -475,14 +505,20 @@ class piCamBot:
         self.GPIO.output(gpio, 0)
 
     def cleanup(self):
-        try:
-            if self.config['buzzer']['enable']:
-                self.logger.info('Disabling buzzer and cleaning up GPIO')
+        if self.buzzer:
+            try:
+                self.logger.info('Disabling buzzer')
                 gpio = self.config['buzzer']['gpio']
                 self.GPIO.output(gpio, 0)
+            except:
+                pass
+
+        if self.buzzer or self.pir:
+            try:
+                self.logger.info('Cleaning up GPIO')
                 self.GPIO.cleanup()
-        except:
-            pass
+            except:
+                pass
 
         if self.updater.running:
             try:

@@ -74,8 +74,6 @@
     "//": "      (so you don't need to terminate a onetime sequence with a 0",
     "//": "note: if you want to disable the buzzer for specific sequences then just",
     "//": "      leave the corresponding sequences empty",
-    "//": "note: currently playing the sequence will block the corresponding thread, so",
-    "//": "      choose short sequences instead of your favorite melody",
     "buzzer": {
 	"//": "enable buzzer",
 	"enable": false,
