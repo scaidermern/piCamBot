@@ -53,7 +53,14 @@ tmpfs           /tmp            tmpfs   nosuid,size=25%   0       0
 After a reboot `/tmp/` should be mounted as tmpfs.
 
 ## Starting the bot
-Execute `python3 piCamBot.py`. The bot will automatically send a greeting message to all owners if Telegram access is working. For troubleshooting take a look at its log files inside the piCamBot directory. It is recommended to start the bot automatically after boot, e.g. via a crontab entry or init script.
+Execute `python3 piCamBot.py` as a regular user, i.e. non-root. The bot will automatically send a greeting message to all owners if Telegram access is working. For troubleshooting take a look at its log files inside the piCamBot directory.
+
+### Autostart
+It is recommended to start the bot automatically after boot, e.g. via a crontab entry or init script. Here is an example for starting the bot automatically at boot inside a tmux session, via cron (`crontab -e` as a regular user, i.e. non-root):
+```
+@reboot              cd ~/picambot && SHELL=/bin/bash tmux new -d -s picambot "python3 piCamBot.py"
+```
+You can attach to it via `tmux a -t picambot` and detach from it via the default key binding `ctrl-b d`.
 
 ## Controlling the bot
 The bot will start with motion-based capturing being disabled.
