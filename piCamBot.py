@@ -74,7 +74,7 @@ class piCamBot:
         try:
             self.config = json.load(open('config.json', 'r'))
         except:
-            self.logger.error('Could not parse config file:', exc_info=True)
+            self.logger.exception('Could not parse config file:')
             sys.exit(1)
 
         self.pir = self.config['pir']['enable']
@@ -119,11 +119,11 @@ class piCamBot:
                 pass # don't log network errors, just ignore
             except Unauthorized as e:
                 # probably wrong access token
-                self.logger.error('Error while trying to access Telegram API, wrong Telegram access token?', exc_info=True)
+                self.logger.exception('Error while trying to access Telegram API, wrong Telegram access token?')
                 raise
             except:
                 # unknown exception, log and then bail out
-                self.logger.error('Error while trying to access Telegram API:', exc_info=True)
+                self.logger.exception('Error while trying to access Telegram API:')
                 raise
 
             time.sleep(1)
@@ -138,7 +138,7 @@ class piCamBot:
                 bot.sendMessage(chat_id=owner_id, text='Hello there, I\'m back!')
             except:
                 # most likely network problem or user has blocked the bot
-                self.logger.warning('Could not send hello to user %s:' % owner_id, exc_info=True)
+                self.logger.exception('Could not send hello to user %s:' % owner_id)
 
 
         threads = []
@@ -184,7 +184,7 @@ class piCamBot:
                     try:
                         bot.sendMessage(chat_id=owner_id, text=msg)
                     except:
-                        self.logger.error('Exception while trying to notify owners:', exc_info=True)
+                        self.logger.exception('Exception while trying to notify owners:')
                         pass
                 sys.exit(1)
 
@@ -253,7 +253,7 @@ class piCamBot:
         try:
             subprocess.call(args)
         except:
-            self.logger.error('Failed to start motion software:', exc_info=True)
+            self.logger.exception('Failed to start motion software:')
             message.reply_text('Error: Failed to start motion software. See log for details.')
             return
 
@@ -331,7 +331,7 @@ class piCamBot:
         try:
             subprocess.call(args)
         except:
-            self.logger.error('Failed to send kill signal:', exc_info=True)
+            self.logger.exception('Failed to send kill signal:')
             message.reply_text('Error: Failed to send kill signal. See log for details.')
             return
         message.reply_text('Kill signal has been sent.')
@@ -373,7 +373,7 @@ class piCamBot:
         try:
             subprocess.call(args)
         except:
-            self.logger.error('Capture failed:', exc_info=True)
+            self.logger.exception('Capture failed:')
             message.reply_text('Error: Capture failed. See log for details.')
             return
 
@@ -426,7 +426,7 @@ class piCamBot:
                         bot.sendPhoto(chat_id=owner_id, caption=filepath, photo=open(filepath, 'rb'))
                     except:
                         # most likely network problem or user has blocked the bot
-                        self.logger.warning('Could not send image to user %s: %s' % owner_id, exc_info=True)
+                        self.logger.exception('Could not send image to user %s: %s' % owner_id)
 
             # always delete image, even if reporting is disabled
             if self.config['general']['delete_images']:
@@ -476,7 +476,7 @@ class piCamBot:
             try:
                 subprocess.call(args)
             except:
-                self.logger.error('Error: Capture failed:', exc_info=True)
+                self.logger.exception('Error: Capture failed:')
                 message.reply_text('Error: Capture failed. See log for details.')
 
     def watchBuzzerQueue(self):
