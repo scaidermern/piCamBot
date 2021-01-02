@@ -459,13 +459,13 @@ class piCamBot:
         while True:
             if not self.armed:
                 # motion detection currently disabled
-                time.sleep(1)
+                time.sleep(0.1)
                 continue
 
             pir = self.GPIO.input(gpio)
             if pir == 0:
                 # no motion detected
-                time.sleep(1)
+                time.sleep(0.1)
                 continue
 
             self.logger.info('PIR: motion detected')
