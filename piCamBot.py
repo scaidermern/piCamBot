@@ -528,7 +528,7 @@ class piCamBot:
             except:
                 pass
 
-        if self.updater.running:
+        if self.updater and self.updater.running:
             try:
                 self.logger.info('Stopping telegram updater')
                 self.updater.stop()
@@ -542,7 +542,7 @@ class piCamBot:
         self.logger.error(msg)
 
         # try to inform owners
-        if self.updater.running:
+        if self.updater and self.updater.running:
             try:
                 bot = self.updater.dispatcher.bot
                 for owner_id in self.config['telegram']['owner_ids']:
