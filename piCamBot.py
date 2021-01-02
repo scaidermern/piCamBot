@@ -489,7 +489,15 @@ class piCamBot:
         duration = self.config['buzzer']['duration']
 
         self.buzzerQueue = queue.SimpleQueue()
+
+        # play arm sequence if we are armed right on startup
+        if self.armed:
+            sequence = self.config['buzzer']['seq_arm']
+            if len(sequence) > 0:
+                self.buzzerQueue.put(sequence)
+
         while True:
+            # wait for queued items and play them
             sequence = self.buzzerQueue.get(block=True, timeout=None)
             self.playSequence(sequence, duration, gpio)
 
