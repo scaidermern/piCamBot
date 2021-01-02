@@ -50,6 +50,8 @@ class piCamBot:
         self.buzzerQueue = None
         # GPIO module, dynamically loaded depending on config
         self.GPIO = None
+        # are we currently shutting down?
+        self.shuttingDown = False
 
     def run(self):
         try:
@@ -538,6 +540,11 @@ class piCamBot:
         self.logger.info('Cleanup done')
 
     def signalHandler(self, signal, frame):
+        # prevent multiple calls by different signals (e.g. SIGHUP, then SIGTERM)
+        if self.shuttingDown:
+            return
+        self.shuttingDown = True
+
         msg = 'Caught signal %d, terminating now.' % signal
         self.logger.error(msg)
 
