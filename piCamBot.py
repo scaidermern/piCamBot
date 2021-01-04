@@ -218,7 +218,7 @@ class piCamBot:
             self.commandArm(update)
         elif cmd == '/disarm':
             self.commandDisarm(update)
-        elif cmd == 'kill':
+        elif cmd == '/kill':
             self.commandKill(update)
         elif cmd == '/status':
             self.commandStatus(update)
