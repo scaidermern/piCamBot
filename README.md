@@ -11,7 +11,7 @@ This is a simple Telegram bot that acts as a security camera. It is intented to 
 - Piezo buzzer (optional)
 - [Telegram](https://telegram.org/) account and a [Telegram bot](https://core.telegram.org/bots)
 - python (version 3):
-  - [RPi.GPIO](https://sourceforge.net/projects/raspberry-gpio-python/) (optional, for controlling a PIR sensor or buzzer)
+  - [RPi.GPIO](https://sourceforge.net/projects/raspberry-gpio-python/) (optional, for controlling a PIR sensor, a buzzer or LEDs)
   - [python-telegram-bot](https://github.com/python-telegram-bot/python-telegram-bot)
   - [PyInotify](https://github.com/dsoprea/PyInotify)
 
@@ -51,6 +51,10 @@ Especially when using a Raspberry Pi it is a good idea to write captured images 
 tmpfs           /tmp            tmpfs   nosuid,size=25%   0       0
 ```
 After a reboot `/tmp/` should be mounted as tmpfs.
+
+### 3) Using LED(s) during capture
+
+To improve image quality during low light you can turn on LED(s) during image capture.  Enable `capture`:`led`:`enable` and set `capture`:`led`:`gpio` accordingly.
 
 ## Starting the bot
 Execute `python3 piCamBot.py` as a regular user, i.e. non-root. The bot will automatically send a greeting message to all owners if Telegram access is working. For troubleshooting take a look at its log files inside the piCamBot directory.

@@ -64,7 +64,16 @@
         "cmd": "raspistill -t 2000 -a 12 -vf -hf -n -o /tmp/piCamBot.jpg",
 
         "//": "where to find the image after capturing",
-        "file": "/tmp/piCamBot.jpg"
+        "file": "/tmp/piCamBot.jpg",
+
+        "//": "settings for LEDs during image capture",
+        "led": {
+            "//": "turn on LED(s) during image capture?",
+            "enable": true,
+
+            "//": "GPIO output pin for turning LED(s) on",
+            "gpio": 26
+        }
     },
 
     "//": "buzzer settings for acoustic alarms, e.g. for piezo buzzers",

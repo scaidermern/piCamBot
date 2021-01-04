@@ -7,7 +7,8 @@ import signal
 import sys
 import time
 
-# always disable buzzer on strg-c or kill
+# always cleanup GPIO on strg-c or kill
+# and disable buzzer
 def signalHandler(signal, frame):
     print('buzzer: off')
     GPIO.output(gpio, 0)

@@ -48,6 +48,10 @@ class piCamBot:
         self.buzzer = False
         # queue of sequences to play via buzzer
         self.buzzerQueue = None
+        # turn on LED(s) during image capture?
+        self.captureLED = False
+        # GPIO output for capture LED(s)
+        self.captureLEDgpio = None
         # GPIO module, dynamically loaded depending on config
         self.GPIO = None
         # are we currently shutting down?
@@ -73,6 +77,12 @@ class piCamBot:
 
         self.logger.info('Starting')
 
+        # register signal handler, needs config to be initialized
+        signal.signal(signal.SIGHUP, self.signalHandler)
+        signal.signal(signal.SIGINT, self.signalHandler)
+        signal.signal(signal.SIGQUIT, self.signalHandler)
+        signal.signal(signal.SIGTERM, self.signalHandler)
+
         try:
             self.config = json.load(open('config.json', 'r'))
         except:
@@ -82,6 +92,7 @@ class piCamBot:
         self.pir = self.config['pir']['enable']
         self.motion = self.config['motion']['enable']
         self.buzzer = self.config['buzzer']['enable']
+        self.captureLED = self.config['capture']['led']['enable']
 
         # check for conflicting config options
         if self.pir and self.motion:
@@ -89,14 +100,13 @@ class piCamBot:
             sys.exit(1)
 
         # check if we need GPIO support
-        if self.buzzer or self.pir:
+        if self.buzzer or self.pir or self.captureLED:
             self.GPIO = importlib.import_module('RPi.GPIO')
+            self.GPIO.setmode(self.GPIO.BCM)
 
-        # register signal handler, needs config to be initialized
-        signal.signal(signal.SIGHUP, self.signalHandler)
-        signal.signal(signal.SIGINT, self.signalHandler)
-        signal.signal(signal.SIGQUIT, self.signalHandler)
-        signal.signal(signal.SIGTERM, self.signalHandler)
+        if self.captureLED:
+            self.captureLEDgpio = self.config['capture']['led']['gpio']
+            self.GPIO.setup(self.captureLEDgpio, self.GPIO.OUT)
 
         # set default state
         self.armed = self.config['general']['arm']
@@ -362,6 +372,11 @@ class piCamBot:
         message = update.message
         message.reply_text('Capture in progress, please wait...')
 
+        # enable capture LED(s)
+        if self.captureLED:
+            self.GPIO.output(self.captureLEDgpio, 1)
+
+        # enqueue buzzer sequence
         if self.buzzer:
             sequence = self.config['buzzer']['seq_capture']
             if len(sequence) > 0:
@@ -378,6 +393,9 @@ class piCamBot:
             self.logger.exception('Capture failed:')
             message.reply_text('Error: Capture failed. See log for details.')
             return
+        finally:
+            # always disable capture LEDs
+            self.GPIO.output(self.captureLEDgpio, 0)
 
         if not os.path.exists(capture_file):
             message.reply_text('Error: Capture file not found: "%s"' % capture_file)
@@ -456,7 +474,6 @@ class piCamBot:
                 sequence = None
 
         gpio = self.config['pir']['gpio']
-        self.GPIO.setmode(self.GPIO.BCM)
         self.GPIO.setup(gpio, self.GPIO.IN)
         while True:
             if not self.armed:
@@ -485,7 +502,6 @@ class piCamBot:
         self.logger.info('Setting up buzzer thread')
 
         gpio = self.config['buzzer']['gpio']
-        self.GPIO.setmode(self.GPIO.BCM)
         self.GPIO.setup(gpio, self.GPIO.OUT)
 
         duration = self.config['buzzer']['duration']
@@ -523,7 +539,14 @@ class piCamBot:
             except:
                 pass
 
-        if self.buzzer or self.pir:
+        if self.captureLED:
+            try:
+                self.logger.info('Disabling capture LED(s)')
+                self.GPIO.output(self.captureLEDgpio, 0)
+            except:
+                pass
+
+        if self.GPIO is not None:
             try:
                 self.logger.info('Cleaning up GPIO')
                 self.GPIO.cleanup()
