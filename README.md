@@ -77,6 +77,7 @@ It supports the following commands:
 - `/status`: Reports whether motion-based capturing is currently enabled.
 - `/capture`: Takes a manual capture with the camera. If motion-based capturing and `motion` software is enabled it will be temporarily stopped and started again after the capture. This is needed since access to the camera is exclusive.
 - `/kill`: Only to be used if motion software is enabled. This kills the software (using SIGKILL) in case it is running and `/disarm` fails to stop it.
+- `/help`: Shows a list of supported commands.
 
 # Examples
 

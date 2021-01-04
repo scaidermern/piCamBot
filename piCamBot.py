@@ -230,6 +230,8 @@ class piCamBot:
             self.commandCapture(update)
             if stopStart:
                 self.commandArm(update)
+        elif cmd == '/help':
+            self.commandHelp(update)
         else:
             self.logger.warning('Unknown command: "%s"' % update.message.text)
 
@@ -404,6 +406,16 @@ class piCamBot:
         message.reply_photo(photo=open(capture_file, 'rb'))
         if self.config['general']['delete_images']:
             os.remove(capture_file)
+
+    def commandHelp(self, update):
+        message = update.message
+        message.reply_text(
+        '/arm enable motion-based capturing\n'
+        '/disarm disable motion-based capturing\n'
+        '/capture take a single shot\n'
+        '/status show current mode\n'
+        '/kill kill motion software, if enabled\n'
+        '/help show this help')
 
     def fetchImageUpdates(self):
         self.logger.info('Setting up image watch thread')
