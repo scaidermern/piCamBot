@@ -216,9 +216,8 @@ class piCamBot:
 
         cmd = update.message.text.lower().rstrip()
         if cmd == '/start':
-            # ignore default start command
-            return
-        if cmd == '/arm':
+            self.commandHelp(update)
+        elif cmd == '/arm':
             self.commandArm(update)
         elif cmd == '/disarm':
             self.commandDisarm(update)
@@ -241,6 +240,7 @@ class piCamBot:
         elif cmd == '/help':
             self.commandHelp(update)
         else:
+            message.reply_text('Unknown command.')
             self.logger.warning('Unknown command: "%s"' % update.message.text)
 
     def commandArm(self, update):
