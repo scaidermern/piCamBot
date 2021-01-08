@@ -7,7 +7,7 @@ This is a simple Telegram bot that acts as a security camera. It is intented to 
 ## Requirements
 - Raspberry PI with Raspbian (recommended, but works on any other Linux system with some adjustments)
 - Camera (e.g. Raspberry Pi Camera Module v2)
-- PIR sensor (e.g. HC-SR501) or [motion](http://lavrsen.dk/foswiki/bin/view/Motion/WebHome) software (using the PIR sensor is recommended, it works way better than using motion software)
+- PIR sensor (e.g. HC-SR501) or [motion](https://motion-project.github.io/) software (using the PIR sensor is recommended, it works way better than using motion software)
 - Piezo buzzer (optional)
 - [Telegram](https://telegram.org/) account and a [Telegram bot](https://core.telegram.org/bots)
 - python (version 3):
