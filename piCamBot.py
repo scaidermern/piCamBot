@@ -44,18 +44,22 @@ class piCamBot:
         self.pir = False
         # movement detection via motion software enabled?
         self.motion = False
-        # buzzer enabled?
-        self.buzzer = False
-        # queue of sequences to play via buzzer
-        self.buzzerQueue = None
-        # turn on LED(s) during image capture?
-        self.captureLED = False
-        # GPIO output for capture LED(s)
-        self.captureLEDgpio = None
         # GPIO module, dynamically loaded depending on config
         self.GPIO = None
         # are we currently shutting down?
         self.shuttingDown = False
+
+        # buzzer enabled?
+        self.buzzer = False
+        # queue of sequences to play via buzzer
+        self.buzzerQueue = None
+
+        # turn on LED(s) during image capture?
+        self.captureLED = False
+        # GPIO output for capture LED(s)
+        self.captureLEDgpio = None
+        # state of capture LED (on/off)
+        self.isCaptureLEDOn = False
 
     def run(self):
         try:
@@ -230,6 +234,10 @@ class piCamBot:
             self.commandCapture(update)
             if stopStart:
                 self.commandArm(update)
+        elif cmd == '/ledtoggle':
+            self.commandLEDToggle(update)
+        elif cmd == '/ledstatus':
+            self.commandLEDStatus(update)
         elif cmd == '/help':
             self.commandHelp(update)
         else:
@@ -376,7 +384,7 @@ class piCamBot:
 
         # enable capture LED(s)
         if self.captureLED:
-            self.GPIO.output(self.captureLEDgpio, 1)
+            self.setCaptureLED(True)
 
         # enqueue buzzer sequence
         if self.buzzer:
@@ -397,7 +405,7 @@ class piCamBot:
             return
         finally:
             # always disable capture LEDs
-            self.GPIO.output(self.captureLEDgpio, 0)
+            self.setCaptureLED(False)
 
         if not os.path.exists(capture_file):
             message.reply_text('Error: Capture file not found: "%s"' % capture_file)
@@ -410,12 +418,30 @@ class piCamBot:
     def commandHelp(self, update):
         message = update.message
         message.reply_text(
-        '/arm enable motion-based capturing\n'
-        '/disarm disable motion-based capturing\n'
-        '/capture take a single shot\n'
-        '/status show current mode\n'
-        '/kill kill motion software, if enabled\n'
-        '/help show this help')
+        '/arm - Enable motion-based capturing.\n'
+        '/disarm - Disable motion-based capturing.\n'
+        '/capture - Take a single shot.\n'
+        '/status - Show current mode.\n'
+        '/kill - Kill motion software, if enabled.\n'
+        '/ledtoggle - Toggle capture LED, if configured.\n'
+        '/ledstatus - Show state of capture LED (on/off), if configured.\n'
+        '/help - Show this help.')
+
+    def commandLEDToggle(self, update):
+        message = update.message
+        if self.captureLED == False:
+            message.reply_text('No capture LED configured.')
+            return
+        self.setCaptureLED(not self.isCaptureLEDOn)
+        # report state back
+        self.commandLEDStatus(update)
+
+    def commandLEDStatus(self, update):
+        message = update.message
+        if self.captureLED == False:
+            message.reply_text('No capture LED configured.')
+            return
+        message.reply_text('Capture LED is %s.' % ('on' if self.isCaptureLEDOn else 'off'))
 
     def fetchImageUpdates(self):
         self.logger.info('Setting up image watch thread')
@@ -538,9 +564,17 @@ class piCamBot:
             elif i == '0':
                 self.GPIO.output(gpio, 0)
             else:
-                self.logger.warning('unknown pattern in sequence: %s', i)
+                self.logger.warning('Unknown pattern in sequence: %s', i)
             time.sleep(duration)
         self.GPIO.output(gpio, 0)
+
+    def setCaptureLED(self, on):
+        if not self.captureLED:
+            self.logger.error('No capture LED configured')
+            return
+
+        self.GPIO.output(self.captureLEDgpio, 1 if on else 0)
+        self.isCaptureLEDOn = True if on else False
 
     def cleanup(self):
         if self.buzzer:
@@ -554,7 +588,7 @@ class piCamBot:
         if self.captureLED:
             try:
                 self.logger.info('Disabling capture LED(s)')
-                self.GPIO.output(self.captureLEDgpio, 0)
+                self.setCaptureLED(False)
             except:
                 pass
 

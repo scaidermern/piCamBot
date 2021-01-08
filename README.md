@@ -56,6 +56,8 @@ After a reboot `/tmp/` should be mounted as tmpfs.
 
 To improve image quality during low light you can turn on LED(s) during image capture.  Enable `capture`:`led`:`enable` and set `capture`:`led`:`gpio` accordingly.
 
+LEDs can also be turned on and off explicitly by using the command `/ledtoggle`.
+
 ## Starting the bot
 Execute `python3 piCamBot.py` as a regular user, i.e. non-root. The bot will automatically send a greeting message to all owners if Telegram access is working. For troubleshooting take a look at its log files inside the piCamBot directory.
 
@@ -71,12 +73,14 @@ The bot will start with motion-based capturing being disabled.
 
 After enabing motion-based capturing it will either react on the PIR sensor and performs captures whenever a motion is reported. Or it reacts on captures performed by the motion software. In either case, captured images are sent via Telegram to all owners. Afterwards these images are deleted from the disk. You can control this behavior via config option `general`:`delete_images`.
 
-It supports the following commands:
+You can use `/help` to list the available commands:
 - `/arm`: Starts motion-based capturing. If `motion` software is enabled it will be started as well.
 - `/disarm`: Stops motion-based capturing. If `motion` software is enabled it will be stopped as well.
 - `/status`: Reports whether motion-based capturing is currently enabled.
 - `/capture`: Takes a manual capture with the camera. If motion-based capturing and `motion` software is enabled it will be temporarily stopped and started again after the capture. This is needed since access to the camera is exclusive.
 - `/kill`: Only to be used if motion software is enabled. This kills the software (using SIGKILL) in case it is running and `/disarm` fails to stop it.
+- `/ledtoggle`: Toggle capture LED, if configured.
+- `/ledstatus`: Show state of capture LED (on/off), if configured.
 - `/help`: Shows a list of supported commands.
 
 # Examples
