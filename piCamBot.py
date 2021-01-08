@@ -37,25 +37,25 @@ class piCamBot:
         # logging stuff
         self.logger = None
         # check for motion and send captured images to owners?
-        self.armed = False
+        self.isArmed = False
         # telegram bot updater
         self.updater = None
-        # movement detection via PIR enabled?
-        self.pir = False
-        # movement detection via motion software enabled?
-        self.motion = False
+        # perform movement detection via PIR?
+        self.hasPIR = False
+        # perform movement detection via motion software?
+        self.useMotion = False
         # GPIO module, dynamically loaded depending on config
         self.GPIO = None
         # are we currently shutting down?
-        self.shuttingDown = False
+        self.isShuttingDown = False
 
         # buzzer enabled?
-        self.buzzer = False
+        self.hasBuzzer = False
         # queue of sequences to play via buzzer
         self.buzzerQueue = None
 
         # turn on LED(s) during image capture?
-        self.captureLED = False
+        self.hasCaptureLED = False
         # GPIO output for capture LED(s)
         self.captureLEDgpio = None
         # state of capture LED (on/off)
@@ -93,27 +93,27 @@ class piCamBot:
             self.logger.exception('Could not parse config file:')
             sys.exit(1)
 
-        self.pir = self.config['pir']['enable']
-        self.motion = self.config['motion']['enable']
-        self.buzzer = self.config['buzzer']['enable']
-        self.captureLED = self.config['capture']['led']['enable']
+        self.hasPIR = self.config['pir']['enable']
+        self.useMotion = self.config['motion']['enable']
+        self.hasBuzzer = self.config['buzzer']['enable']
+        self.hasCaptureLED = self.config['capture']['led']['enable']
 
         # check for conflicting config options
-        if self.pir and self.motion:
+        if self.hasPIR and self.useMotion:
             self.logger.error('Enabling both PIR and motion based capturing is not supported')
             sys.exit(1)
 
         # check if we need GPIO support
-        if self.buzzer or self.pir or self.captureLED:
+        if self.hasBuzzer or self.hasPIR or self.hasCaptureLED:
             self.GPIO = importlib.import_module('RPi.GPIO')
             self.GPIO.setmode(self.GPIO.BCM)
 
-        if self.captureLED:
+        if self.hasCaptureLED:
             self.captureLEDgpio = self.config['capture']['led']['gpio']
             self.GPIO.setup(self.captureLEDgpio, self.GPIO.OUT)
 
         # set default state
-        self.armed = self.config['general']['arm']
+        self.isArmed = self.config['general']['arm']
 
         self.updater = Updater(self.config['telegram']['token'])
         dispatcher = self.updater.dispatcher
@@ -166,14 +166,14 @@ class piCamBot:
         threads.append(image_watch_thread)
 
         # set up PIR thread
-        if self.pir:
+        if self.hasPIR:
             pir_thread = threading.Thread(target=self.watchPIR, name="PIR")
             pir_thread.daemon = True
             pir_thread.start()
             threads.append(pir_thread)
 
         # set up buzzer thread
-        if self.buzzer:
+        if self.hasBuzzer:
             buzzer_thread = threading.Thread(target=self.watchBuzzerQueue, name="buzzer")
             buzzer_thread.daemon = True
             buzzer_thread.start()
@@ -247,24 +247,24 @@ class piCamBot:
 
     def commandArm(self, update):
         message = update.message
-        if self.armed:
+        if self.isArmed:
             message.reply_text('Motion-based capturing already enabled! Nothing to do.')
             return
 
-        if not self.pir and not self.motion:
+        if not self.hasPIR and not self.useMotion:
             message.reply_text('Error: Cannot enable motion-based capturing since neither PIR nor motion is enabled!')
             return
 
         message.reply_text('Enabling motion-based capturing...')
 
-        if self.buzzer:
+        if self.hasBuzzer:
             sequence = self.config['buzzer']['seq_arm']
             if len(sequence) > 0:
                 self.buzzerQueue.put(sequence)
 
-        self.armed = True
+        self.isArmed = True
 
-        if not self.motion:
+        if not self.useMotion:
             # we are done, PIR-mode needs no further steps
             return
 
@@ -292,20 +292,20 @@ class piCamBot:
 
     def commandDisarm(self, update):
         message = update.message
-        if not self.armed:
+        if not self.isArmed:
             message.reply_text('Motion-based capturing not enabled! Nothing to do.')
             return
 
         message.reply_text('Disabling motion-based capturing...')
 
-        if self.buzzer:
+        if self.hasBuzzer:
             sequence = self.config['buzzer']['seq_disarm']
             if len(sequence) > 0:
                 self.buzzerQueue.put(sequence)
 
-        self.armed = False
+        self.isArmed = False
 
-        if not self.motion:
+        if not self.useMotion:
             # we are done, PIR-mode needs no further steps
             return
 
@@ -348,7 +348,7 @@ class piCamBot:
 
     def commandKill(self, update):
         message = update.message
-        if not self.motion:
+        if not self.useMotion:
             message.reply_text('Error: kill command only supported when motion is enabled')
             return
         args = shlex.split('killall -9 %s' % self.config['motion']['kill_name'])
@@ -362,7 +362,7 @@ class piCamBot:
 
     def commandStatus(self, update):
         message = update.message
-        if not self.armed:
+        if not self.isArmed:
             message.reply_text('Motion-based capturing not enabled.')
             return
 
@@ -371,7 +371,7 @@ class piCamBot:
             message.reply_text('Error: Motion-based capturing enabled but image dir not available!')
             return
      
-        if self.motion:
+        if self.useMotion:
             # check if motion software is running or died unexpectedly
             if not self.isMotionRunning():
                 message.reply_text('Error: Motion-based capturing enabled but motion software not running!')
@@ -385,11 +385,11 @@ class piCamBot:
         message.reply_text('Capture in progress, please wait...')
 
         # enable capture LED(s)
-        if self.captureLED:
+        if self.hasCaptureLED:
             self.setCaptureLED(True)
 
         # enqueue buzzer sequence
-        if self.buzzer:
+        if self.hasBuzzer:
             sequence = self.config['buzzer']['seq_capture']
             if len(sequence) > 0:
                 self.buzzerQueue.put(sequence)
@@ -432,7 +432,7 @@ class piCamBot:
 
     def commandLEDToggle(self, update):
         message = update.message
-        if self.captureLED == False:
+        if self.hasCaptureLED == False:
             message.reply_text('No capture LED configured.')
             return
         self.setCaptureLED(not self.isCaptureLEDOn)
@@ -441,14 +441,14 @@ class piCamBot:
 
     def commandLEDStatus(self, update):
         message = update.message
-        if self.captureLED == False:
+        if self.hasCaptureLED == False:
             message.reply_text('No capture LED configured.')
             return
         message.reply_text('Capture LED is %s.' % ('on' if self.isCaptureLEDOn else 'off'))
 
     def commandBuzzer(self, update):
         message = update.message
-        if self.buzzer == False:
+        if self.hasBuzzer == False:
             message.reply_text('No buzzer configured.')
             return
         sequence = self.config['buzzer']['seq_buzzer']
@@ -489,7 +489,7 @@ class piCamBot:
                 continue
 
             self.logger.info('New image file: "%s"' % filepath)
-            if self.armed:
+            if self.isArmed:
                 bot = self.updater.dispatcher.bot
                 for owner_id in self.config['telegram']['owner_ids']:
                     try:
@@ -518,7 +518,7 @@ class piCamBot:
         self.logger.info('Setting up PIR watch thread')
 
         sequence = None
-        if self.buzzer:
+        if self.hasBuzzer:
             sequence = self.config['buzzer']['seq_motion']
             if len(sequence) == 0:
                 sequence = None
@@ -526,7 +526,7 @@ class piCamBot:
         gpio = self.config['pir']['gpio']
         self.GPIO.setup(gpio, self.GPIO.IN)
         while True:
-            if not self.armed:
+            if not self.isArmed:
                 # motion detection currently disabled
                 time.sleep(0.1)
                 continue
@@ -559,7 +559,7 @@ class piCamBot:
         self.buzzerQueue = queue.SimpleQueue()
 
         # play arm sequence if we are armed right on startup
-        if self.armed:
+        if self.isArmed:
             sequence = self.config['buzzer']['seq_arm']
             if len(sequence) > 0:
                 self.buzzerQueue.put(sequence)
@@ -581,7 +581,7 @@ class piCamBot:
         self.GPIO.output(gpio, 0)
 
     def setCaptureLED(self, on):
-        if not self.captureLED:
+        if not self.hasCaptureLED:
             self.logger.error('No capture LED configured')
             return
 
@@ -589,7 +589,7 @@ class piCamBot:
         self.isCaptureLEDOn = True if on else False
 
     def cleanup(self):
-        if self.buzzer:
+        if self.hasBuzzer:
             try:
                 self.logger.info('Disabling buzzer')
                 gpio = self.config['buzzer']['gpio']
@@ -597,7 +597,7 @@ class piCamBot:
             except:
                 pass
 
-        if self.captureLED:
+        if self.hasCaptureLED:
             try:
                 self.logger.info('Disabling capture LED(s)')
                 self.setCaptureLED(False)
@@ -622,9 +622,9 @@ class piCamBot:
 
     def signalHandler(self, signal, frame):
         # prevent multiple calls by different signals (e.g. SIGHUP, then SIGTERM)
-        if self.shuttingDown:
+        if self.isShuttingDown:
             return
-        self.shuttingDown = True
+        self.isShuttingDown = True
 
         msg = 'Caught signal %d, terminating now.' % signal
         self.logger.error(msg)
