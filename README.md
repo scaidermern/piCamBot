@@ -43,7 +43,7 @@ Ideally run motion separately to adjust all these settings until it matches your
 
 ### 2) Configuring a buzzer
 
-You can enable acoustic alarms, e.g. with a piezo buzzer. Enable the buzzer via `buzzer`:`enable` and set `buzzer`:`gpio` accordingly. You can also define custom buzzer sequences for various actions. To see if the buzzer is working and the correct gpio port has been set you can run `python3 test_buzzer.py`.
+You can enable acoustic alarms, e.g. with a piezo buzzer. Enable the buzzer via `buzzer`:`enable` and set `buzzer`:`gpio` accordingly. You can also define custom buzzer sequences for various actions. To see if the buzzer is working and the correct gpio port has been set you can run `python3 test_buzzer.py` or send the `/buzzer` command.
 
 ### Optional: Use a tmpfs for captured images
 Especially when using a Raspberry Pi it is a good idea to write captured images to a tmpfs. This increases the lifespan if your sdcard. Using the standard configuration piCamBot writes its captures to `/tmp/piCamBot/`. To mount `/tmp/` as tmpfs add the following line to your `/etc/fstab`:
@@ -81,6 +81,7 @@ You can use `/help` to list the available commands:
 - `/kill`: Only to be used if motion software is enabled. This kills the software (using SIGKILL) in case it is running and `/disarm` fails to stop it.
 - `/ledtoggle`: Toggle capture LED, if configured.
 - `/ledstatus`: Show state of capture LED (on/off), if configured.
+- `/buzzer`: Trigger buzzer, if configured.
 - `/help`: Shows a list of supported commands.
 
 # Examples

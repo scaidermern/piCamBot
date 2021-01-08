@@ -237,6 +237,8 @@ class piCamBot:
             self.commandLEDToggle(update)
         elif cmd == '/ledstatus':
             self.commandLEDStatus(update)
+        elif cmd == '/buzzer':
+            self.commandBuzzer(update)
         elif cmd == '/help':
             self.commandHelp(update)
         else:
@@ -425,6 +427,7 @@ class piCamBot:
         '/kill - Kill motion software, if enabled.\n'
         '/ledtoggle - Toggle capture LED, if configured.\n'
         '/ledstatus - Show state of capture LED (on/off), if configured.\n'
+        '/buzzer - Trigger buzzer, if configured.\n'
         '/help - Show this help.')
 
     def commandLEDToggle(self, update):
@@ -442,6 +445,15 @@ class piCamBot:
             message.reply_text('No capture LED configured.')
             return
         message.reply_text('Capture LED is %s.' % ('on' if self.isCaptureLEDOn else 'off'))
+
+    def commandBuzzer(self, update):
+        message = update.message
+        if self.buzzer == False:
+            message.reply_text('No buzzer configured.')
+            return
+        sequence = self.config['buzzer']['seq_buzzer']
+        if len(sequence) > 0:
+            self.buzzerQueue.put(sequence)
 
     def fetchImageUpdates(self):
         self.logger.info('Setting up image watch thread')

@@ -97,15 +97,15 @@
 	"seq_motion": "1110",
 
 	"//": "on/off sequence (onetime) when arming camera",
-	"//": "note: buzzer gets automatically turned off after this sequence",
 	"seq_arm": "1",
 
 	"//": "on/off sequence (onetime) when disarming camera",
-	"//": "note: buzzer gets automatically turned off after this sequence",
 	"seq_disarm": "101",
 
 	"//": "on/off sequence (onetime) when capturing single shots",
-	"//": "note: buzzer gets automatically turned off after this sequence",
-	"seq_capture": "10101"
+	"seq_capture": "10101",
+
+	"//": "on/off sequence (onetime) for the /buzzer command",
+	"seq_buzzer": "11110110"
     }
 }
