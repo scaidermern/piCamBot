@@ -149,12 +149,13 @@ class piCamBot:
             sys.exit(1)
 
         # pretend to be nice to our owners
-        for owner_id in self.config['telegram']['owner_ids']:
+        ownerIDs = self.config['telegram']['owner_ids']
+        for ownerID in ownerIDs:
             try:
-                bot.sendMessage(chat_id=owner_id, text='Hello there, I\'m back!')
+                bot.sendMessage(chat_id=ownerID, text='Hello there, I\'m back!')
             except:
                 # most likely network problem or user has blocked the bot
-                self.logger.exception('Could not send hello to user %s:' % owner_id)
+                self.logger.exception('Could not send hello to user %s:' % ownerID)
 
 
         threads = []
@@ -196,7 +197,7 @@ class piCamBot:
                 # something went wrong, bailing out
                 msg = 'Thread "%s" died, terminating now.' % thread.name
                 self.logger.error(msg)
-                for owner_id in self.config['telegram']['owner_ids']:
+                for ownerID in ownerIDs:
                     try:
                         bot.sendMessage(chat_id=owner_id, text=msg)
                     except:
@@ -273,9 +274,9 @@ class piCamBot:
             message.reply_text('Motion software already running.')
             return
 
-        args = shlex.split(self.config['motion']['cmd'])
+        motionCmd = shlex.split(self.config['motion']['cmd'])
         try:
-            subprocess.call(args)
+            subprocess.call(motionCmd)
         except:
             self.logger.exception('Failed to start motion software:')
             message.reply_text('Error: Failed to start motion software. See log for details.')
@@ -351,9 +352,9 @@ class piCamBot:
         if not self.useMotion:
             message.reply_text('Error: kill command only supported when motion is enabled')
             return
-        args = shlex.split('killall -9 %s' % self.config['motion']['kill_name'])
+        killCmd = shlex.split('killall -9 %s' % self.config['motion']['kill_name'])
         try:
-            subprocess.call(args)
+            subprocess.call(killCmd)
         except:
             self.logger.exception('Failed to send kill signal:')
             message.reply_text('Error: Failed to send kill signal. See log for details.')
@@ -398,9 +399,9 @@ class piCamBot:
         if os.path.exists(capture_file):
             os.remove(capture_file)
 
-        args = shlex.split(self.config['capture']['cmd'])
+        captureCmd = shlex.split(self.config['capture']['cmd'])
         try:
-            subprocess.call(args)
+            subprocess.call(captureCmd)
         except:
             self.logger.exception('Capture failed:')
             message.reply_text('Error: Capture failed. See log for details.')
@@ -459,14 +460,21 @@ class piCamBot:
         self.logger.info('Setting up image watch thread')
 
         # set up image directory watch
-        watch_dir = self.config['general']['image_dir']
+        watchDir = self.config['general']['image_dir']
         # purge (remove and re-create) if we allowed to do so
         if self.config['general']['delete_images']:
-            shutil.rmtree(watch_dir, ignore_errors=True)
-        if not os.path.exists(watch_dir):
-            os.makedirs(watch_dir) # racy but we don't care
+            shutil.rmtree(watchDir, ignore_errors=True)
+        if not os.path.exists(watchDir):
+            os.makedirs(watchDir) # racy but we don't care
         notify = inotify.adapters.Inotify()
-        notify.add_watch(watch_dir)
+        notify.add_watch(watchDir)
+
+        # only watch for created and renamed files
+        matchedTypes = ['IN_CLOSE_WRITE', 'IN_MOVED_TO']
+
+        ownerIDs = self.config['telegram']['owner_ids']
+        deleteImages = self.config['general']['delete_images']
+        bot = self.updater.dispatcher.bot
 
         # check for new events
         # (runs forever but we could bail out: check for event being None
@@ -475,11 +483,9 @@ class piCamBot:
             if event is None:
                 continue
 
-            (header, type_names, watch_path, filename) = event
+            (header, typeNames, watch_path, filename) = event
 
-            # only watch for created and renamed files
-            matched_types = ['IN_CLOSE_WRITE', 'IN_MOVED_TO']
-            if not any(type in type_names for type in matched_types):
+            if not any(type in typeNames for type in matchedTypes):
                 continue
 
             filepath = ('%s/%s' % (watch_path, filename))
@@ -490,16 +496,15 @@ class piCamBot:
 
             self.logger.info('New image file: "%s"' % filepath)
             if self.isArmed:
-                bot = self.updater.dispatcher.bot
-                for owner_id in self.config['telegram']['owner_ids']:
+                for ownerID in ownerIDs:
                     try:
-                        bot.sendPhoto(chat_id=owner_id, caption=filepath, photo=open(filepath, 'rb'))
+                        bot.sendPhoto(chat_id=ownerID, caption=filepath, photo=open(filepath, 'rb'))
                     except:
                         # most likely network problem or user has blocked the bot
-                        self.logger.exception('Could not send image to user %s: %s' % owner_id)
+                        self.logger.exception('Could not send image to user %s: %s' % ownerID)
 
             # always delete image, even if reporting is disabled
-            if self.config['general']['delete_images']:
+            if deleteImages:
                 os.remove(filepath)
 
     def getMotionPID(self):
@@ -641,9 +646,9 @@ class piCamBot:
         if self.updater and self.updater.running:
             try:
                 bot = self.updater.dispatcher.bot
-                for owner_id in self.config['telegram']['owner_ids']:
+                for ownerID in self.config['telegram']['owner_ids']:
                     try:
-                        bot.sendMessage(chat_id=owner_id, text=msg)
+                        bot.sendMessage(chat_id=ownerID, text=msg)
                     except:
                         pass
             except:
