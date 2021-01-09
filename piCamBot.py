@@ -160,7 +160,7 @@ class piCamBot:
         threads = []
 
         # set up watch thread for captured images
-        image_watch_thread = threading.Thread(target=self.fetchImageUpdates, name="Image watch")
+        image_watch_thread = threading.Thread(target=self.watchImageDir, name="Image watch")
         image_watch_thread.daemon = True
         image_watch_thread.start()
         threads.append(image_watch_thread)
@@ -455,7 +455,7 @@ class piCamBot:
         if len(sequence) > 0:
             self.buzzerQueue.put(sequence)
 
-    def fetchImageUpdates(self):
+    def watchImageDir(self):
         self.logger.info('Setting up image watch thread')
 
         # set up image directory watch
@@ -523,6 +523,8 @@ class piCamBot:
             if len(sequence) == 0:
                 sequence = None
 
+        captureCmd = shlex.split(self.config['pir']['capture_cmd'])
+
         gpio = self.config['pir']['gpio']
         self.GPIO.setup(gpio, self.GPIO.IN)
         while True:
@@ -540,13 +542,19 @@ class piCamBot:
             self.logger.info('PIR: motion detected')
             if sequence:
                 self.buzzerQueue.put(sequence)
-            args = shlex.split(self.config['pir']['capture_cmd'])
+
+            # enable capture LED(s)
+            if self.hasCaptureLED:
+                self.setCaptureLED(True)
 
             try:
-                subprocess.call(args)
+                subprocess.call(captureCmd)
             except:
                 self.logger.exception('Error: Capture failed:')
                 message.reply_text('Error: Capture failed. See log for details.')
+            finally:
+                # always disable capture LEDs
+                self.setCaptureLED(False)
 
     def watchBuzzerQueue(self):
         self.logger.info('Setting up buzzer thread')
