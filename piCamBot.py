@@ -69,7 +69,7 @@ class piCamBot:
 
     def runInternal(self):
         # setup logging, we want to log both to stdout and a file
-        logFormat = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        logFormat = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(__name__)
         fileHandler = logging.handlers.TimedRotatingFileHandler(filename='picam.log', when='D', backupCount=7)
         fileHandler.setFormatter(logFormat)
@@ -81,7 +81,7 @@ class piCamBot:
 
         self.logger.info('Starting')
 
-        # register signal handler, needs config to be initialized
+        # register signal handler
         signal.signal(signal.SIGHUP, self.signalHandler)
         signal.signal(signal.SIGINT, self.signalHandler)
         signal.signal(signal.SIGQUIT, self.signalHandler)
