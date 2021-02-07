@@ -182,7 +182,7 @@ class piCamBot:
 
         # register message handler and start polling
         # note: we don't register each command individually because then we
-        # wouldn't be able to check the owner_id, instead we register for text
+        # wouldn't be able to check the ownerID, instead we register for text
         # messages
         dispatcher.add_handler(MessageHandler(Filters.text, self.performCommand))
         self.updater.start_polling()
@@ -199,7 +199,7 @@ class piCamBot:
                 self.logger.error(msg)
                 for ownerID in ownerIDs:
                     try:
-                        bot.sendMessage(chat_id=owner_id, text=msg)
+                        bot.sendMessage(chat_id=ownerID, text=msg)
                     except:
                         self.logger.exception('Exception while trying to notify owners:')
                         pass
@@ -207,6 +207,8 @@ class piCamBot:
 
     def performCommand(self, update, context):
         message = update.message
+        if message is None:
+            return
         # skip messages from non-owner
         if message.from_user.id not in self.config['telegram']['owner_ids']:
             self.logger.warning('Received message from unknown user "%s": "%s"' % (message.from_user, message.text))
@@ -624,7 +626,7 @@ class piCamBot:
             except:
                 pass
 
-        if self.updater and self.updater.running:
+        if self.updater is not None and self.updater.running:
             try:
                 self.logger.info('Stopping telegram updater')
                 self.updater.stop()
