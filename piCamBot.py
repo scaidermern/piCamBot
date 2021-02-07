@@ -71,7 +71,7 @@ class piCamBot:
         # setup logging, we want to log both to stdout and a file
         logFormat = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(__name__)
-        fileHandler = logging.handlers.TimedRotatingFileHandler(filename='picam.log', when='D', backupCount=7)
+        fileHandler = logging.handlers.TimedRotatingFileHandler(filename='picam.log', when='midnight', backupCount=7)
         fileHandler.setFormatter(logFormat)
         self.logger.addHandler(fileHandler)
         stdoutHandler = logging.StreamHandler(sys.stdout)
