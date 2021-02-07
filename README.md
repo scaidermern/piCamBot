@@ -1,11 +1,11 @@
 # piCamBot
-Security camera based on a Raspberry Pi and Telegram, controllable via smartphone and desktop computer.
+Security camera based on a Raspberry Pi and Telegram, controllable via smartphone and computer.
 
 ## Description
-This is a simple Telegram bot that acts as a security camera. It is intented to run on a Raspberry Pi but may be used on any other Linux system, too. It requires a camera (for example a Raspberry Pi Camera Module v2) and either a PIR sensor or the software *motion*. It can be controlled by any Telegram client, thus supporting many different client platforms such as smartphones (Android, iOS and Windows Phone) and desktop computers (Linux, macOS and Windows).
+This is a simple Telegram bot that acts as a security camera. It is intented to run on a Raspberry Pi but may be used on any other Linux system, too. It requires a camera (for example a Raspberry Pi Camera Module v2) and either a PIR sensor or the software *motion*. It can be controlled by any Telegram client, thus supporting many different client platforms such as smartphones (Android, iOS and Windows Phone) and computers (Linux, macOS and Windows).
 
 ## Requirements
-- Raspberry PI with Raspbian (recommended, but works on any other Linux system with some adjustments)
+- Raspberry Pi with [Raspberry Pi OS](https://www.raspberrypi.org/software/) (recommended, but works on any other Linux system with some adjustments)
 - Camera (e.g. Raspberry Pi Camera Module v2)
 - PIR sensor (e.g. HC-SR501) or [motion](https://motion-project.github.io/) software (using the PIR sensor is recommended, it works way better than using motion software)
 - Piezo buzzer (optional)
@@ -15,7 +15,7 @@ This is a simple Telegram bot that acts as a security camera. It is intented to 
   - [python-telegram-bot](https://github.com/python-telegram-bot/python-telegram-bot)
   - [PyInotify](https://github.com/dsoprea/PyInotify)
 
-To install the necessary software on Raspbian, Debian or a similar distribution use the following commands:
+To install the necessary software on Raspberry Pi OS, Debian or a similar distribution use the following commands:
 - as root:
   - `apt install python3-rpi.gpio` (optional, for PIR or buzzer support)
   - `apt install python3-pip`
