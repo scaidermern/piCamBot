@@ -68,6 +68,11 @@ It is recommended to start the bot automatically after boot, e.g. via a crontab 
 ```
 You can attach to it via `tmux a -t picambot` and detach from it via the default key binding `ctrl-b d`.
 
+There is also a shell script which automatically restarts the bot on fatal errors: `piCamBotLoop.sh`. To use it, just run this shell script instead of the python script. You can also add it to cron, of course (as an alternative to the previous example, don't add both!):
+```
+@reboot              cd ~/picambot && SHELL=/bin/bash tmux new -d -s picambot "./piCamBotLoop.sh"
+```
+
 ## Controlling the bot
 The bot will start with motion-based capturing being disabled.
 
