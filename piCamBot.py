@@ -1,17 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
-# dependencies:
-# - https://github.com/python-telegram-bot/python-telegram-bot
-# - https://github.com/dsoprea/PyInotify
-#
-# similar project:
-# - https://github.com/FutureSharks/rpi-security/blob/master/bin/rpi-security.py
-#
-# - todo:
-#   - configurable log file path
-#   - check return code of raspistill
-#
 
 import importlib
 import inotify.adapters
@@ -27,11 +15,16 @@ import subprocess
 import sys
 import threading
 import time
+from collections import deque
+from telegram import MAX_MESSAGE_LENGTH
 from telegram.error import NetworkError, Unauthorized
 from telegram.ext import Updater, MessageHandler, Filters
 
 class piCamBot:
     def __init__(self):
+        # name of the bot, used as base name for logging
+        self.botName = 'piCamBot'
+
         # config from config file
         self.config = None
         # logging stuff
@@ -71,11 +64,11 @@ class piCamBot:
         # setup logging, we want to log both to stdout and a file
         logFormat = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(__name__)
-        fileHandler = logging.handlers.TimedRotatingFileHandler(filename='picam.log', when='midnight', backupCount=7)
-        fileHandler.setFormatter(logFormat)
-        self.logger.addHandler(fileHandler)
+        logFileHandler = logging.handlers.TimedRotatingFileHandler(filename=self.botName + '.log', when='midnight', backupCount=7)
+        logFileHandler.setFormatter(logFormat)
         stdoutHandler = logging.StreamHandler(sys.stdout)
         stdoutHandler.setFormatter(logFormat)
+        self.logger.addHandler(logFileHandler)
         self.logger.addHandler(stdoutHandler)
         self.logger.setLevel(logging.INFO)
 
@@ -242,6 +235,8 @@ class piCamBot:
             self.commandLEDStatus(update)
         elif cmd == '/buzzer':
             self.commandBuzzer(update)
+        elif cmd == '/log':
+            self.commandLog(update)
         elif cmd == '/help':
             self.commandHelp(update)
         else:
@@ -431,6 +426,7 @@ class piCamBot:
         '/ledtoggle - Toggle capture LED, if configured.\n'
         '/ledstatus - Show state of capture LED (on/off), if configured.\n'
         '/buzzer - Trigger buzzer, if configured.\n'
+        '/log - Show recent log messages.\n'
         '/help - Show this help.')
 
     def commandLEDToggle(self, update):
@@ -457,6 +453,19 @@ class piCamBot:
         sequence = self.config['buzzer']['seq_buzzer']
         if len(sequence) > 0:
             self.buzzerQueue.put(sequence)
+
+    def commandLog(self, update):
+        '''Handle the log command. Show recent log messages.'''
+        numLines = 100
+        messages = deque(maxlen=numLines)
+        fileName = self.botName + '.log'
+        with open(fileName, 'r') as f:
+            for line in f:
+                line = line.rstrip('\n')
+                messages.append(line)
+
+        message = update.message
+        message.reply_text("\n".join(messages)[-MAX_MESSAGE_LENGTH:])
 
     def watchImageDir(self):
         self.logger.info('Setting up image watch thread')

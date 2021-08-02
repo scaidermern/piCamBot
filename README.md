@@ -87,6 +87,7 @@ You can use `/help` to list the available commands:
 - `/ledtoggle`: Toggle capture LED, if configured.
 - `/ledstatus`: Show state of capture LED (on/off), if configured.
 - `/buzzer`: Trigger buzzer, if configured.
+- `/log`: Show recent log messages.
 - `/help`: Shows a list of supported commands.
 
 # Examples
