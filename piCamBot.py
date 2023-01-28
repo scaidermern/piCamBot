@@ -509,7 +509,7 @@ class piCamBot:
             if self.isArmed:
                 for ownerID in ownerIDs:
                     try:
-                        bot.sendDocument(chat_id=ownerID, caption=filepath, photo=open(filepath, 'rb'))
+                        bot.sendDocument(chat_id=ownerID, caption=filepath, document=open(filepath, 'rb'))
                     except:
                         # most likely network problem or user has blocked the bot
                         self.logger.exception('Could not send image to user %s: %s' % ownerID)
