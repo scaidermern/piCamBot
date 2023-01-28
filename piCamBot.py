@@ -16,7 +16,7 @@ import sys
 import threading
 import time
 from collections import deque
-from telegram import MAX_MESSAGE_LENGTH
+MAX_MESSAGE_LENGTH = 4000
 from telegram.error import NetworkError, Unauthorized
 from telegram.ext import Updater, MessageHandler, Filters
 
@@ -184,7 +184,7 @@ class piCamBot:
             time.sleep(1)
             # check if all threads are still alive
             for thread in threads:
-                if thread.isAlive():
+                if thread.is_alive():
                     continue
 
                 # something went wrong, bailing out
@@ -509,7 +509,7 @@ class piCamBot:
             if self.isArmed:
                 for ownerID in ownerIDs:
                     try:
-                        bot.sendPhoto(chat_id=ownerID, caption=filepath, photo=open(filepath, 'rb'))
+                        bot.sendDocument(chat_id=ownerID, caption=filepath, photo=open(filepath, 'rb'))
                     except:
                         # most likely network problem or user has blocked the bot
                         self.logger.exception('Could not send image to user %s: %s' % ownerID)

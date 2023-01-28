@@ -6,7 +6,7 @@
 cd "$(dirname "$0")"
 
 while true; do
-    ./piCamBot.py
+    python3 piCamBot.py
     sleep 0.2
     echo "Restarting..."
 done
