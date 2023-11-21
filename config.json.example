@@ -38,10 +38,13 @@
 
 	"//": "command for creating snapshots if motion is detected",
 	"capture_cmd": "raspistill -a 12 -dt -vf -hf -n -t 1500 -o /tmp/piCamBot/piCamBot_%d.jpg",
-	"__capture_cmd": "raspistill -a 12 -dt -vf -hf -n -t 5000 -tl 1000 -o /tmp/piCamBot/piCamBot_%d.jpg"
+	"__capture_cmd": "raspistill -a 12 -dt -vf -hf -n -t 5000 -tl 1000 -o /tmp/piCamBot/piCamBot_%d.jpg",
+
+	"//": "store time of last detected motion, even if not armed. will be included in status report.",
+	"creepy_mode": false
     },
 
-    "//": "motion-related settings (for motion detection via camera)",
+    "//": "settings related to the software 'motion' (for motion detection via camera instead of PIR sensor)",
     "motion": {
 	"//": "enable motion detection via camera?",
 	"enable": false,

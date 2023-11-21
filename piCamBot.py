@@ -54,6 +54,8 @@ class piCamBot:
         # state of capture LED (on/off)
         self.isCaptureLEDOn = False
 
+        self.lastMotion = None
+
     def run(self):
         try:
             self.runInternal()
@@ -360,8 +362,14 @@ class piCamBot:
 
     def commandStatus(self, update):
         message = update.message
+
+        # provide further details if available
+        report = ''
+        if self.lastMotion:
+            report += '\nLast motion: %s' % time.strftime('%Y-%m-%d %H:%M:%S', self.lastMotion)
+
         if not self.isArmed:
-            message.reply_text('Motion-based capturing not enabled.')
+            message.reply_text('Motion-based capturing not enabled.' + report)
             return
 
         image_dir = self.config['general']['image_dir']
@@ -372,11 +380,11 @@ class piCamBot:
         if self.useMotion:
             # check if motion software is running or died unexpectedly
             if not self.isMotionRunning():
-                message.reply_text('Error: Motion-based capturing enabled but motion software not running!')
+                message.reply_text('Error: Motion-based capturing enabled but motion software not running!' + report)
                 return
-            message.reply_text('Motion-based capturing enabled and motion software running.')
+            message.reply_text('Motion-based capturing enabled and motion software running.' + report)
         else:
-            message.reply_text('Motion-based capturing enabled.')
+            message.reply_text('Motion-based capturing enabled.' + report)
 
     def commandCapture(self, update):
         message = update.message
@@ -540,11 +548,12 @@ class piCamBot:
                 sequence = None
 
         captureCmd = shlex.split(self.config['pir']['capture_cmd'])
+        creepyMode = self.config['pir']['creepy_mode']
 
         gpio = self.config['pir']['gpio']
         self.GPIO.setup(gpio, self.GPIO.IN)
         while True:
-            if not self.isArmed:
+            if not self.isArmed and not creepyMode:
                 # motion detection currently disabled
                 time.sleep(0.1)
                 continue
@@ -552,6 +561,12 @@ class piCamBot:
             pir = self.GPIO.input(gpio)
             if pir == 0:
                 # no motion detected
+                time.sleep(0.1)
+                continue
+
+            self.lastMotion = time.localtime()
+            if not self.isArmed and creepyMode:
+                # just store time, nothing more to do here
                 time.sleep(0.1)
                 continue
 
