@@ -102,4 +102,4 @@ ENV/
 
 # picambot
 config.json
-picam.log*
+piCamBot.log*
