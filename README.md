@@ -20,7 +20,7 @@ To install the necessary software on Raspberry Pi OS, Debian or a similar distri
   - `apt install python3-rpi.gpio` (optional, for PIR or buzzer support)
   - `apt install python3-pip`
 - as regular user:
-  - `pip3 install python-telegram-bot inotify`
+  - `pip3 install python-telegram-bot==13.14 inotify`
   
 ## Configuration
 Copy `config.json.example` to `config.json` and open it for editing. In section `telegram` enter your Telegram `token` and `owner_ids`. See these [instructions for obtaining your Telegram user ID](https://stackoverflow.com/questions/31078710/how-to-obtain-telegram-chat-id-for-a-specific-user). Alternatively just add your Telegram token and a random owner ID, run piCamBot and send a message to your bot. piCamBot will log messages from unknown users and write out their user IDs.
